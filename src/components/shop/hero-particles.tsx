@@ -36,8 +36,8 @@ export function HeroParticles({ className }: { className?: string }) {
       c.width = c.height = S;
       const ctx = c.getContext("2d")!;
       ctx.clearRect(0, 0, S, S);
-      ctx.shadowColor = "rgba(255,200,40,0.9)";
-      ctx.shadowBlur = 14;
+      ctx.shadowColor = "rgba(255,200,40,0.7)";
+      ctx.shadowBlur = 8;
       ctx.fillStyle = "#ffcf33";
       const rr = (x: number, y: number, w: number, h: number, r: number) => {
         ctx.beginPath();
@@ -60,7 +60,7 @@ export function HeroParticles({ className }: { className?: string }) {
     const tex = makeDumbbellTexture();
 
     // ---- Dumbbell sprites ----------------------------------------------
-    const COUNT = 44;
+    const COUNT = 20;
     type Bell = {
       sprite: THREE.Sprite;
       mat: THREE.SpriteMaterial;
@@ -77,23 +77,23 @@ export function HeroParticles({ className }: { className?: string }) {
         transparent: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
-        opacity: 0.18 + Math.random() * 0.4,
+        opacity: 0.12 + Math.random() * 0.22,
         rotation: Math.random() * Math.PI * 2,
       });
       const sprite = new THREE.Sprite(mat);
-      const scale = 1.1 + Math.random() * 2.2;
+      const scale = 1.6 + Math.random() * 1.8;
       sprite.scale.set(scale, scale, 1);
       sprite.position.set(
-        (Math.random() - 0.5) * 64,
-        (Math.random() - 0.5) * 46,
+        (Math.random() - 0.5) * 66,
+        (Math.random() - 0.5) * 48,
         (Math.random() - 0.5) * 22
       );
       group.add(sprite);
       bells.push({
         sprite,
         mat,
-        speed: 0.5 + Math.random() * 1.3,
-        spin: (Math.random() - 0.5) * 0.6,
+        speed: 0.32 + Math.random() * 0.6,
+        spin: (Math.random() - 0.5) * 0.32,
       });
     }
 

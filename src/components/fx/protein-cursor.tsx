@@ -67,8 +67,6 @@ export function ProteinCursor() {
         visible = true;
         document.documentElement.classList.add("cursor-visible");
       }
-      const d = db();
-      if (d) d.style.transform = `translate3d(${mx}px, ${my}px, 0) translate(-50%, -50%)`;
 
       const target = e.target as Element | null;
       const interactive = !!target?.closest?.(
@@ -96,11 +94,15 @@ export function ProteinCursor() {
     const onEnter = () => document.documentElement.classList.add("cursor-visible");
 
     const tick = () => {
-      // Lagging ring.
-      rx += (mx - rx) * 0.18;
-      ry += (my - ry) * 0.18;
+      // Ring and dumbbell share one eased position so the dumbbell always sits
+      // centered inside the ring (snappy enough to feel precise).
+      rx += (mx - rx) * 0.32;
+      ry += (my - ry) * 0.32;
+      const pos = `translate3d(${rx}px, ${ry}px, 0) translate(-50%, -50%)`;
       const r = ring();
-      if (r) r.style.transform = `translate3d(${rx}px, ${ry}px, 0) translate(-50%, -50%)`;
+      if (r) r.style.transform = pos;
+      const d = db();
+      if (d) d.style.transform = pos;
 
       // Tilt the dumbbell toward horizontal movement, then ease back to level.
       const vx = mx - px;

@@ -18,7 +18,7 @@ export default async function HomePage() {
   return (
     <>
       {/* Hero */}
-      <Hero />
+      <Hero products={featured.slice(0, 5)} />
 
       {/* Feature strip */}
       <section className="relative z-10 border-b border-border bg-background">

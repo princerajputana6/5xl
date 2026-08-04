@@ -6,6 +6,8 @@ import { motion, useReducedMotion, useScroll, useTransform } from "motion/react"
 import { ArrowRight, ShieldCheck, Star, Zap, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HeroParticles } from "@/components/shop/hero-particles";
+import { HeroCardFan } from "@/components/shop/hero-card-fan";
+import type { ProductCardDTO } from "@/types/catalog";
 
 const stats = [
   { icon: Zap, value: "50K+", label: "Athletes fueled" },
@@ -22,7 +24,7 @@ const ease = [0.22, 1, 0.36, 1] as const;
  * motion-animated copy. Dark by design for contrast; the rest of the page
  * stays on the light brand surface. Honors reduced motion throughout.
  */
-export function Hero() {
+export function Hero({ products = [] }: { products?: ProductCardDTO[] }) {
   const reduce = useReducedMotion();
   const sectionRef = React.useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({
@@ -98,7 +100,7 @@ export function Hero() {
         }}
       />
 
-      <div className="container-5xl relative flex min-h-[92vh] flex-col justify-center py-24 md:py-32">
+      <div className="container-5xl relative grid min-h-[92vh] items-center gap-12 py-24 md:grid-cols-2 md:py-32">
         <motion.div
           variants={container}
           initial="hidden"
@@ -119,7 +121,7 @@ export function Hero() {
 
           <motion.h1
             variants={item}
-            className="font-display text-5xl font-extrabold uppercase leading-[0.92] tracking-tight sm:text-6xl md:text-8xl"
+            className="font-display text-5xl font-extrabold uppercase leading-[0.92] tracking-tight sm:text-6xl lg:text-7xl"
           >
             Fuel beyond{" "}
             <span className="relative inline-block">
@@ -184,6 +186,16 @@ export function Hero() {
               </div>
             ))}
           </motion.dl>
+        </motion.div>
+
+        {/* Featured product hand (teen-patti fan) */}
+        <motion.div
+          initial={reduce ? false : { opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, delay: 0.4, ease }}
+          style={reduce ? undefined : { y: copyY }}
+        >
+          <HeroCardFan products={products} />
         </motion.div>
       </div>
 
