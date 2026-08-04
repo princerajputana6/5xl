@@ -58,7 +58,7 @@ async function record(
     .select(field)
     .lean();
   if (!user) throw new HttpError("User not found.", 404);
-  const balanceAfter = (user as Record<string, number>)[field] ?? 0;
+  const balanceAfter = (user as unknown as Record<string, number>)[field] ?? 0;
   await WalletTransaction.create({
     user: userId,
     kind,
