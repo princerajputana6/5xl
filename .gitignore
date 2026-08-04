@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# uploaded media (local dev fallback for M5)
+/public/uploads/*
+!/public/uploads/.gitkeep
