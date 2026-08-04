@@ -3,7 +3,7 @@ import { ArrowRight, ShieldCheck, Truck, BadgeCheck, FlaskConical } from "lucide
 import { mockCategories, mockGoals, mockFeatures } from "@/lib/mock";
 import { getFeaturedProducts, getBestsellers } from "@/server/services/catalog.service";
 import { ProductCard } from "@/components/shop/product-card";
-import { HeroShowcase } from "@/components/shop/hero-showcase";
+import { Hero } from "@/components/shop/hero";
 import { Button } from "@/components/ui/button";
 
 const featureIcons = [FlaskConical, Truck, ShieldCheck, BadgeCheck];
@@ -17,45 +17,7 @@ export default async function HomePage() {
   return (
     <>
       {/* Hero */}
-      <section className="relative overflow-hidden border-b border-border bg-background">
-        <div
-          aria-hidden
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(55% 60% at 12% 0%, oklch(0.86 0.18 96 / 0.40), transparent 55%), radial-gradient(45% 60% at 92% 100%, oklch(0.86 0.18 96 / 0.20), transparent 55%)",
-          }}
-        />
-        <div className="container-5xl relative grid items-center gap-10 py-20 md:grid-cols-2 md:py-28">
-          <div className="flex flex-col items-start gap-6">
-            <span className="inline-flex items-center gap-2 rounded-full border border-primary bg-primary/15 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-foreground">
-              <span className="size-1.5 rounded-full bg-primary" /> Premium Sports Nutrition
-            </span>
-            <h1 className="max-w-3xl font-display text-5xl font-extrabold uppercase leading-[0.95] tracking-tight md:text-7xl">
-              Fuel beyond{" "}
-              <span className="inline-block -skew-x-6 bg-primary px-3 text-primary-foreground">
-                limits
-              </span>
-            </h1>
-            <p className="max-w-xl text-lg text-muted-foreground">
-              Lab-tested whey, creatine and mass gainers engineered for serious
-              athletes. Authentic supplements, delivered fast across India.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Button asChild size="lg">
-                <Link href="/products">
-                  Shop all products <ArrowRight className="ml-1 size-4" />
-                </Link>
-              </Button>
-              <Button asChild size="lg" variant="outline">
-                <Link href="/subscriptions">Start a subscription</Link>
-              </Button>
-            </div>
-          </div>
-
-          <HeroShowcase />
-        </div>
-      </section>
+      <Hero />
 
       {/* Feature strip */}
       <section className="border-b border-border">
