@@ -4,9 +4,10 @@ import * as React from "react";
 import * as THREE from "three";
 
 /**
- * A lightweight three.js layer for the hero: a slowly drifting field of warm
- * golden particles with subtle pointer parallax, composited over the video with
- * additive blending. Purely decorative and fully disabled for reduced motion.
+ * A lightweight three.js layer for the hero: a slow-motion field of golden
+ * **dumbbells** drifting upward and tumbling, with subtle pointer parallax,
+ * composited over the video with additive blending. Purely decorative and
+ * fully disabled for reduced motion.
  */
 export function HeroParticles({ className }: { className?: string }) {
   const mountRef = React.useRef<HTMLDivElement>(null);
@@ -20,7 +21,7 @@ export function HeroParticles({ className }: { className?: string }) {
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 100);
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
     camera.position.z = 28;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -28,44 +29,73 @@ export function HeroParticles({ className }: { className?: string }) {
     renderer.setClearColor(0x000000, 0);
     mount.appendChild(renderer.domElement);
 
-    // Two particle clusters at different depths for parallax.
-    const COUNT = 900;
-    const positions = new Float32Array(COUNT * 3);
-    const speeds = new Float32Array(COUNT);
-    for (let i = 0; i < COUNT; i++) {
-      positions[i * 3 + 0] = (Math.random() - 0.5) * 70;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 50;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 40;
-      speeds[i] = 0.6 + Math.random() * 1.6;
-    }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-
-    // Soft round sprite so points read as glowing dust, not squares.
-    const sprite = (() => {
+    // ---- Dumbbell sprite texture (drawn once) --------------------------
+    const makeDumbbellTexture = () => {
+      const S = 128;
       const c = document.createElement("canvas");
-      c.width = c.height = 64;
+      c.width = c.height = S;
       const ctx = c.getContext("2d")!;
-      const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-      g.addColorStop(0, "rgba(255,214,64,1)");
-      g.addColorStop(0.4, "rgba(255,196,32,0.55)");
-      g.addColorStop(1, "rgba(255,196,32,0)");
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, 64, 64);
+      ctx.clearRect(0, 0, S, S);
+      ctx.shadowColor = "rgba(255,200,40,0.9)";
+      ctx.shadowBlur = 14;
+      ctx.fillStyle = "#ffcf33";
+      const rr = (x: number, y: number, w: number, h: number, r: number) => {
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, r);
+        ctx.fill();
+      };
+      const cy = S / 2;
+      // handle bar
+      rr(40, cy - 6, 48, 12, 6);
+      // inner plates
+      rr(26, cy - 26, 16, 52, 7);
+      rr(86, cy - 26, 16, 52, 7);
+      // outer plates
+      rr(12, cy - 18, 12, 36, 6);
+      rr(104, cy - 18, 12, 36, 6);
       const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
       return tex;
-    })();
+    };
+    const tex = makeDumbbellTexture();
 
-    const material = new THREE.PointsMaterial({
-      size: 0.55,
-      map: sprite,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      opacity: 0.9,
-    });
-    const points = new THREE.Points(geo, material);
-    scene.add(points);
+    // ---- Dumbbell sprites ----------------------------------------------
+    const COUNT = 44;
+    type Bell = {
+      sprite: THREE.Sprite;
+      mat: THREE.SpriteMaterial;
+      speed: number;
+      spin: number;
+    };
+    const bells: Bell[] = [];
+    const group = new THREE.Group();
+    scene.add(group);
+
+    for (let i = 0; i < COUNT; i++) {
+      const mat = new THREE.SpriteMaterial({
+        map: tex,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        opacity: 0.18 + Math.random() * 0.4,
+        rotation: Math.random() * Math.PI * 2,
+      });
+      const sprite = new THREE.Sprite(mat);
+      const scale = 1.1 + Math.random() * 2.2;
+      sprite.scale.set(scale, scale, 1);
+      sprite.position.set(
+        (Math.random() - 0.5) * 64,
+        (Math.random() - 0.5) * 46,
+        (Math.random() - 0.5) * 22
+      );
+      group.add(sprite);
+      bells.push({
+        sprite,
+        mat,
+        speed: 0.5 + Math.random() * 1.3,
+        spin: (Math.random() - 0.5) * 0.6,
+      });
+    }
 
     // Pointer parallax target.
     let targetX = 0;
@@ -89,19 +119,19 @@ export function HeroParticles({ className }: { className?: string }) {
 
     let raf = 0;
     const clock = new THREE.Clock();
-    const pos = geo.attributes.position as THREE.BufferAttribute;
 
     const render = () => {
-      const dt = clock.getDelta();
-      // Drift particles upward; wrap around when they exit the top.
-      for (let i = 0; i < COUNT; i++) {
-        let y = pos.getY(i) + speeds[i] * dt * 1.4;
-        if (y > 25) y = -25;
-        pos.setY(i, y);
+      const dt = Math.min(clock.getDelta(), 0.05);
+      for (const b of bells) {
+        // Drift upward; wrap around when past the top.
+        b.sprite.position.y += b.speed * dt * 1.2;
+        if (b.sprite.position.y > 24) {
+          b.sprite.position.y = -24;
+          b.sprite.position.x = (Math.random() - 0.5) * 64;
+        }
+        // Tumble.
+        b.mat.rotation += b.spin * dt;
       }
-      pos.needsUpdate = true;
-
-      points.rotation.y += dt * 0.04;
       // Ease camera toward pointer for a gentle parallax.
       camera.position.x += (targetX * 3 - camera.position.x) * 0.05;
       camera.position.y += (-targetY * 2 - camera.position.y) * 0.05;
@@ -112,7 +142,6 @@ export function HeroParticles({ className }: { className?: string }) {
     };
 
     if (reduce) {
-      // Render a single static frame, no animation loop.
       renderer.render(scene, camera);
     } else {
       raf = requestAnimationFrame(render);
@@ -122,9 +151,8 @@ export function HeroParticles({ className }: { className?: string }) {
       cancelAnimationFrame(raf);
       window.removeEventListener("pointermove", onMove);
       ro.disconnect();
-      geo.dispose();
-      material.dispose();
-      sprite.dispose();
+      for (const b of bells) b.mat.dispose();
+      tex.dispose();
       renderer.dispose();
       if (renderer.domElement.parentNode === mount) {
         mount.removeChild(renderer.domElement);

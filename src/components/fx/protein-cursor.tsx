@@ -3,18 +3,20 @@
 import * as React from "react";
 
 /**
- * Custom, protein-themed pointer for fine-pointer devices:
- *  - a glowing volt-lime core dot that tracks the pointer 1:1,
- *  - a ring that lags behind with easing and swells over interactive targets,
- *  - a "protein powder" spark trail that scatters as you move,
- *  - a scoop/dumbbell glyph that fades in when hovering something clickable.
+ * Custom, gym-themed pointer for fine-pointer devices:
+ *  - a glowing yellow **dumbbell** that tracks the pointer 1:1 and tilts with
+ *    your movement direction,
+ *  - a soft ring that lags behind with easing and swells over interactive
+ *    targets (the dumbbell pumps up with it),
+ *  - a "protein powder" spark trail that scatters as you move.
  *
  * Pure rAF + direct style writes (no React re-renders) so it stays smooth.
  * Disabled for touch input and when the user prefers reduced motion.
  */
 export function ProteinCursor() {
   const [enabled, setEnabled] = React.useState(false);
-  const dotRef = React.useRef<HTMLDivElement>(null);
+  const dbRef = React.useRef<HTMLDivElement>(null);
+  const dbInnerRef = React.useRef<HTMLDivElement>(null);
   const ringRef = React.useRef<HTMLDivElement>(null);
   const sparksRef = React.useRef<HTMLDivElement>(null);
 
@@ -28,13 +30,16 @@ export function ProteinCursor() {
 
     let mx = window.innerWidth / 2;
     let my = window.innerHeight / 2;
+    let px = mx;
     let rx = mx;
     let ry = my;
+    let tilt = 0;
     let raf = 0;
     let lastSpark = 0;
     let visible = false;
 
-    const dot = () => dotRef.current;
+    const db = () => dbRef.current;
+    const dbInner = () => dbInnerRef.current;
     const ring = () => ringRef.current;
 
     const spawnSpark = (x: number, y: number) => {
@@ -62,7 +67,7 @@ export function ProteinCursor() {
         visible = true;
         document.documentElement.classList.add("cursor-visible");
       }
-      const d = dot();
+      const d = db();
       if (d) d.style.transform = `translate3d(${mx}px, ${my}px, 0) translate(-50%, -50%)`;
 
       const target = e.target as Element | null;
@@ -70,6 +75,7 @@ export function ProteinCursor() {
         "a, button, input, textarea, select, [role=button], label, summary, [data-cursor='grow']"
       );
       ring()?.classList.toggle("is-active", interactive);
+      db()?.classList.toggle("is-active", interactive);
 
       const now = performance.now();
       if (now - lastSpark > 38) {
@@ -78,16 +84,32 @@ export function ProteinCursor() {
       }
     };
 
-    const onDown = () => ring()?.classList.add("is-down");
-    const onUp = () => ring()?.classList.remove("is-down");
+    const onDown = () => {
+      ring()?.classList.add("is-down");
+      db()?.classList.add("is-down");
+    };
+    const onUp = () => {
+      ring()?.classList.remove("is-down");
+      db()?.classList.remove("is-down");
+    };
     const onLeave = () => document.documentElement.classList.remove("cursor-visible");
     const onEnter = () => document.documentElement.classList.add("cursor-visible");
 
     const tick = () => {
+      // Lagging ring.
       rx += (mx - rx) * 0.18;
       ry += (my - ry) * 0.18;
       const r = ring();
       if (r) r.style.transform = `translate3d(${rx}px, ${ry}px, 0) translate(-50%, -50%)`;
+
+      // Tilt the dumbbell toward horizontal movement, then ease back to level.
+      const vx = mx - px;
+      px = mx;
+      const targetTilt = Math.max(-28, Math.min(28, vx * 1.6));
+      tilt += (targetTilt - tilt) * 0.12;
+      const inner = dbInner();
+      if (inner) inner.style.transform = `rotate(${tilt.toFixed(2)}deg)`;
+
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -114,18 +136,21 @@ export function ProteinCursor() {
   return (
     <div aria-hidden className="protein-cursor-root">
       <div ref={sparksRef} className="protein-cursor-sparks" />
-      <div ref={ringRef} className="protein-cursor-ring">
-        {/* dumbbell glyph, revealed on hover */}
-        <svg viewBox="0 0 24 24" className="protein-cursor-glyph" fill="none">
-          <path
-            d="M6.5 8.5v7M4 10v3M17.5 8.5v7M20 10v3M6.5 12h11"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-        </svg>
+      <div ref={ringRef} className="protein-cursor-ring" />
+      <div ref={dbRef} className="protein-cursor-dumbbell">
+        <div ref={dbInnerRef} className="protein-cursor-dumbbell-inner">
+          <svg viewBox="0 0 32 32" className="protein-cursor-db-svg">
+            {/* handle */}
+            <rect x="11" y="14.5" width="10" height="3" rx="1.5" />
+            {/* inner plates */}
+            <rect x="7.5" y="9.5" width="4" height="13" rx="1.6" />
+            <rect x="20.5" y="9.5" width="4" height="13" rx="1.6" />
+            {/* outer plates */}
+            <rect x="3.75" y="12" width="3.5" height="8" rx="1.5" />
+            <rect x="24.75" y="12" width="3.5" height="8" rx="1.5" />
+          </svg>
+        </div>
       </div>
-      <div ref={dotRef} className="protein-cursor-dot" />
     </div>
   );
 }

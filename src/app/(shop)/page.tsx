@@ -4,6 +4,7 @@ import { mockCategories, mockGoals, mockFeatures } from "@/lib/mock";
 import { getFeaturedProducts, getBestsellers } from "@/server/services/catalog.service";
 import { ProductCard } from "@/components/shop/product-card";
 import { Hero } from "@/components/shop/hero";
+import { Reveal, Parallax } from "@/components/fx/scroll-fx";
 import { Button } from "@/components/ui/button";
 
 const featureIcons = [FlaskConical, Truck, ShieldCheck, BadgeCheck];
@@ -39,15 +40,15 @@ export default async function HomePage() {
 
       {/* Shop by category */}
       <section className="container-5xl py-16">
-        <div className="mb-8 flex items-end justify-between">
+        <Reveal className="mb-8 flex items-end justify-between">
           <h2 className="font-display text-3xl font-extrabold uppercase tracking-tight">
             Shop by category
           </h2>
           <Link href="/products" className="text-sm font-semibold text-foreground/70 hover:text-foreground hover:underline">
             View all
           </Link>
-        </div>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+        </Reveal>
+        <Reveal className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6" delay={0.05}>
           {mockCategories.map((c) => (
             <Link
               key={c.slug}
@@ -63,25 +64,25 @@ export default async function HomePage() {
               <p className="text-xs text-muted-foreground">{c.blurb}</p>
             </Link>
           ))}
-        </div>
+        </Reveal>
       </section>
 
       {/* Featured products */}
       {featured.length > 0 && (
         <section className="container-5xl py-16">
-          <div className="mb-8 flex items-end justify-between">
+          <Reveal className="mb-8 flex items-end justify-between">
             <h2 className="font-display text-3xl font-extrabold uppercase tracking-tight">
               Featured
             </h2>
             <Link href="/products" className="text-sm font-semibold text-foreground/70 hover:text-foreground hover:underline">
               View all
             </Link>
-          </div>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          </Reveal>
+          <Reveal className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4" delay={0.05}>
             {featured.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
-          </div>
+          </Reveal>
         </section>
       )}
 
@@ -89,19 +90,19 @@ export default async function HomePage() {
       {bestsellers.length > 0 && (
         <section className="border-y border-border bg-muted/30">
           <div className="container-5xl py-16">
-            <div className="mb-8 flex items-end justify-between">
+            <Reveal className="mb-8 flex items-end justify-between">
               <h2 className="font-display text-3xl font-extrabold uppercase tracking-tight">
                 Bestsellers
               </h2>
               <Link href="/products?sort=rating" className="text-sm font-semibold text-foreground/70 hover:text-foreground hover:underline">
                 View all
               </Link>
-            </div>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            </Reveal>
+            <Reveal className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4" delay={0.05}>
               {bestsellers.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}
-            </div>
+            </Reveal>
           </div>
         </section>
       )}
@@ -109,10 +110,12 @@ export default async function HomePage() {
       {/* Shop by goal */}
       <section className="bg-muted/30">
         <div className="container-5xl py-16">
-          <h2 className="mb-8 font-display text-3xl font-extrabold uppercase tracking-tight">
-            Shop by goal
-          </h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Reveal>
+            <h2 className="mb-8 font-display text-3xl font-extrabold uppercase tracking-tight">
+              Shop by goal
+            </h2>
+          </Reveal>
+          <Reveal className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" delay={0.05}>
             {mockGoals.map((g) => (
               <Link
                 key={g.slug}
@@ -128,13 +131,26 @@ export default async function HomePage() {
                 </span>
               </Link>
             ))}
-          </div>
+          </Reveal>
         </div>
       </section>
 
       {/* CTA */}
       <section className="container-5xl py-20">
-        <div className="relative overflow-hidden rounded-2xl bg-primary px-8 py-16 text-center text-primary-foreground">
+        <Reveal className="relative overflow-hidden rounded-2xl bg-primary px-8 py-16 text-center text-primary-foreground">
+          {/* Parallax decorative dumbbell glyphs */}
+          <Parallax
+            className="pointer-events-none absolute -right-6 -top-8 select-none opacity-15"
+            distance={40}
+          >
+            <span className="text-[9rem] leading-none">🏋️</span>
+          </Parallax>
+          <Parallax
+            className="pointer-events-none absolute -bottom-10 -left-4 select-none opacity-15"
+            distance={-30}
+          >
+            <span className="text-[7rem] leading-none">💪</span>
+          </Parallax>
           <h2 className="relative font-display text-4xl font-extrabold uppercase tracking-tight md:text-5xl">
             Ready to level up?
           </h2>
@@ -149,7 +165,7 @@ export default async function HomePage() {
           >
             <Link href="/register">Create your account</Link>
           </Button>
-        </div>
+        </Reveal>
       </section>
     </>
   );

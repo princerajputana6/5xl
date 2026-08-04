@@ -173,32 +173,49 @@ html.cursor-visible .protein-cursor-root {
   opacity: 1;
 }
 
-.protein-cursor-dot {
+.protein-cursor-dumbbell {
   position: fixed;
   top: 0;
   left: 0;
-  width: 8px;
-  height: 8px;
-  border-radius: 9999px;
-  background: var(--primary);
-  box-shadow:
-    0 0 8px 1px color-mix(in oklch, var(--primary), transparent 30%),
-    0 0 20px 4px color-mix(in oklch, var(--primary), transparent 60%);
+  width: 30px;
+  height: 30px;
   will-change: transform;
+  transition: scale 0.18s ease;
+}
+.protein-cursor-dumbbell.is-active {
+  scale: 1.35;
+}
+.protein-cursor-dumbbell.is-down {
+  scale: 0.82;
+}
+.protein-cursor-dumbbell-inner {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  will-change: transform;
+}
+.protein-cursor-db-svg {
+  width: 100%;
+  height: 100%;
+  fill: var(--primary);
+  stroke: color-mix(in oklch, var(--foreground), transparent 25%);
+  stroke-width: 0.9;
+  filter:
+    drop-shadow(0 0 4px color-mix(in oklch, var(--primary), transparent 35%))
+    drop-shadow(0 0 10px color-mix(in oklch, var(--primary), transparent 65%));
 }
 
 .protein-cursor-ring {
   position: fixed;
   top: 0;
   left: 0;
-  display: grid;
-  place-items: center;
   width: 34px;
   height: 34px;
   border-radius: 9999px;
-  border: 1.5px solid color-mix(in oklch, var(--primary), transparent 25%);
-  background: color-mix(in oklch, var(--primary), transparent 92%);
-  box-shadow: 0 0 12px color-mix(in oklch, var(--primary), transparent 75%);
+  border: 1.5px solid color-mix(in oklch, var(--primary), transparent 45%);
+  background: color-mix(in oklch, var(--primary), transparent 94%);
+  box-shadow: 0 0 12px color-mix(in oklch, var(--primary), transparent 78%);
   will-change: transform, width, height;
   transition:
     width 0.22s ease,
@@ -207,29 +224,14 @@ html.cursor-visible .protein-cursor-root {
     border-color 0.22s ease;
 }
 .protein-cursor-ring.is-active {
-  width: 54px;
-  height: 54px;
-  background: color-mix(in oklch, var(--primary), transparent 82%);
-  border-color: var(--primary);
+  width: 56px;
+  height: 56px;
+  background: color-mix(in oklch, var(--primary), transparent 85%);
+  border-color: color-mix(in oklch, var(--primary), transparent 20%);
 }
 .protein-cursor-ring.is-down {
   width: 26px;
   height: 26px;
-}
-
-.protein-cursor-glyph {
-  width: 20px;
-  height: 20px;
-  color: var(--primary);
-  opacity: 0;
-  transform: scale(0.5) rotate(-12deg);
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
-}
-.protein-cursor-ring.is-active .protein-cursor-glyph {
-  opacity: 1;
-  transform: scale(1) rotate(0deg);
 }
 
 .protein-cursor-sparks {

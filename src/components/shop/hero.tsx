@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { motion, useReducedMotion } from "motion/react";
+import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import { ArrowRight, ShieldCheck, Star, Zap, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HeroParticles } from "@/components/shop/hero-particles";
@@ -24,6 +24,17 @@ const ease = [0.22, 1, 0.36, 1] as const;
  */
 export function Hero() {
   const reduce = useReducedMotion();
+  const sectionRef = React.useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start start", "end start"],
+  });
+  // Background drifts down slower than the page scrolls (classic parallax),
+  // and the copy fades as the hero leaves.
+  const bgY = useTransform(scrollYProgress, [0, 1], ["0%", "22%"]);
+  const bgScale = useTransform(scrollYProgress, [0, 1], [1, 1.12]);
+  const copyY = useTransform(scrollYProgress, [0, 1], [0, 120]);
+  const copyOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
 
   const container = {
     hidden: {},
@@ -39,10 +50,14 @@ export function Hero() {
       };
 
   return (
-    <section className="relative isolate overflow-hidden bg-neutral-950 text-white">
-      {/* Background video */}
-      <video
-        className="absolute inset-0 -z-20 h-full w-full object-cover"
+    <section
+      ref={sectionRef}
+      className="relative isolate overflow-hidden bg-neutral-950 text-white"
+    >
+      {/* Background video (parallax) */}
+      <motion.video
+        className="absolute inset-0 -z-20 h-[120%] w-full object-cover"
+        style={reduce ? undefined : { y: bgY, scale: bgScale }}
         autoPlay
         muted
         loop
@@ -51,9 +66,9 @@ export function Hero() {
         poster="/videos/hero-poster.jpg"
       >
         <source src="/videos/hero-gym.mp4" type="video/mp4" />
-      </video>
+      </motion.video>
 
-      {/* three.js particle field */}
+      {/* three.js dumbbell field */}
       <HeroParticles className="absolute inset-0 -z-10 h-full w-full mix-blend-screen [mask-image:linear-gradient(to_right,transparent,black_35%)]" />
 
       {/* Legibility + brand gradients */}
@@ -88,6 +103,7 @@ export function Hero() {
           variants={container}
           initial="hidden"
           animate="show"
+          style={reduce ? undefined : { y: copyY, opacity: copyOpacity }}
           className="flex max-w-2xl flex-col items-start gap-6"
         >
           <motion.span
