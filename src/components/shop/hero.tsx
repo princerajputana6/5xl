@@ -100,7 +100,7 @@ export function Hero({ products = [] }: { products?: ProductCardDTO[] }) {
         }}
       />
 
-      <div className="container-5xl relative grid min-h-[92vh] items-center gap-12 py-24 md:grid-cols-2 md:py-32">
+      <div className="container-5xl relative grid min-h-[92vh] items-center gap-8 py-24 md:grid-cols-[0.85fr_1.15fr] md:py-32">
         <motion.div
           variants={container}
           initial="hidden"
