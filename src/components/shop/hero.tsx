@@ -69,7 +69,7 @@ export function Hero() {
       </motion.video>
 
       {/* three.js dumbbell field */}
-      <HeroParticles className="absolute inset-0 -z-10 h-full w-full mix-blend-screen [mask-image:linear-gradient(to_right,transparent,black_35%)]" />
+      <HeroParticles className="absolute inset-0 -z-10 h-full w-full overflow-hidden mix-blend-screen [mask-image:linear-gradient(to_right,transparent,black_35%)]" />
 
       {/* Legibility + brand gradients */}
       <div

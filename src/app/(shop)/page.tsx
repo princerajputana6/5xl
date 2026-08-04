@@ -21,7 +21,7 @@ export default async function HomePage() {
       <Hero />
 
       {/* Feature strip */}
-      <section className="border-b border-border">
+      <section className="relative z-10 border-b border-border bg-background">
         <div className="container-5xl grid grid-cols-2 gap-6 py-8 md:grid-cols-4">
           {mockFeatures.map((f, i) => {
             const Icon = featureIcons[i];

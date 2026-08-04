@@ -109,7 +109,9 @@ export function HeroParticles({ className }: { className?: string }) {
     const resize = () => {
       const w = mount.clientWidth;
       const h = mount.clientHeight;
-      renderer.setSize(w, h, false);
+      // updateStyle=true so the canvas CSS size matches the mount (otherwise
+      // it renders at the full device-pixel buffer size and overflows).
+      renderer.setSize(w, h, true);
       camera.aspect = w / h || 1;
       camera.updateProjectionMatrix();
     };
