@@ -234,7 +234,7 @@ export async function markOrderFailed(gatewayOrderId: string): Promise<void> {
 // ---- reads -------------------------------------------------------------
 
 export function toOrderDTO(o: OrderDoc): OrderDTO {
-  const amounts = o.amounts ?? { subtotal: 0, shipping: 0, discount: 0, tax: 0, total: 0, currency: "INR" };
+  const amounts = o.amounts ?? { subtotal: 0, shipping: 0, discount: 0, pointsRedeemed: 0, tax: 0, total: 0, currency: "INR" };
   const payment = o.payment ?? {};
   const address = o.address ?? {};
   return {
