@@ -138,6 +138,11 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
+  /* Anton ships a single heavy weight; stop browsers from faux-bolding it
+     (the weight utilities on headings would otherwise distort the letters). */
+  .font-display {
+    font-synthesis: none;
+  }
   ::selection {
     background-color: var(--primary);
     color: var(--primary-foreground);

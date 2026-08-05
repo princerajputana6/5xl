@@ -1,19 +1,19 @@
 import type { Metadata } from "next";
-import { Inter, Barlow_Condensed } from "next/font/google";
+import { Manrope, Anton } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
 import { siteConfig } from "@/lib/site";
 
-const inter = Inter({
+const manrope = Manrope({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
 });
 
-const barlow = Barlow_Condensed({
+const anton = Anton({
   subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
+  weight: "400",
   variable: "--font-display",
   display: "swap",
 });
@@ -49,7 +49,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${barlow.variable} min-h-dvh antialiased`}
+        className={`${manrope.variable} ${anton.variable} min-h-dvh antialiased`}
       >
         <Providers>{children}</Providers>
         <Toaster richColors position="top-center" />
