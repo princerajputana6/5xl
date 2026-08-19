@@ -1,6 +1,9 @@
 import { z } from "zod";
 
+export const ADDRESS_LABELS = ["Home", "Work", "Other"] as const;
+
 export const addressSchema = z.object({
+  label: z.enum(ADDRESS_LABELS).optional(),
   name: z.string().trim().min(2, "Enter the recipient's name"),
   phone: z
     .string()

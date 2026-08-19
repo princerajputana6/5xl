@@ -157,6 +157,24 @@
 }
 
 /* ------------------------------------------------------------------ */
+/* Print                                                               */
+/* ------------------------------------------------------------------ */
+/* Admin reports print to PDF via the browser dialog — drop the app
+   chrome and the dark theme so the output is a clean document. */
+@media print {
+  [data-admin-chrome] {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  @page {
+    margin: 14mm;
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* Accordion panel height                                              */
 /* ------------------------------------------------------------------ */
 /* The accordion keyframes animate height but run with fill-mode "none",

@@ -3,12 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Loader2, ShoppingBag, ShieldCheck, Lock, Tag, X } from "lucide-react";
+import { Loader2, ShoppingBag, ShieldCheck, Lock, Tag, X, AlertCircle } from "lucide-react";
 import { useCart } from "@/components/providers/cart-provider";
-import { addressSchema, type AddressInput } from "@/lib/validators/checkout";
+import { AddressBook } from "@/components/shop/address-book";
 import { computeAmounts } from "@/lib/cart-pricing";
 import { formatINR } from "@/lib/format";
 import { ProductImage } from "@/components/shop/product-image";
@@ -16,7 +14,6 @@ import type { CheckoutSession } from "@/types/order";
 import type { SavedAddress } from "@/server/services/address.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/shared/empty-state";
 import {
@@ -63,29 +60,29 @@ export function CheckoutClient({
   const [pending, setPending] = React.useState(false);
   const [stubSession, setStubSession] = React.useState<CheckoutSession | null>(null);
 
-  const preset = savedAddresses.find((a) => a.isDefault) ?? savedAddresses[0];
+  // Address book state. The list is refetched after any add/edit/delete so the
+  // cards stay in step with what's actually stored on the account.
+  const [addresses, setAddresses] = React.useState<SavedAddress[]>(savedAddresses);
+  const [selectedAddress, setSelectedAddress] = React.useState<SavedAddress | null>(
+    savedAddresses.find((a) => a.isDefault) ?? savedAddresses[0] ?? null
+  );
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<AddressInput>({
-    resolver: zodResolver(addressSchema),
-    defaultValues: preset
-      ? {
-          name: preset.name,
-          phone: preset.phone,
-          line1: preset.line1,
-          line2: preset.line2,
-          city: preset.city,
-          state: preset.state,
-          pincode: preset.pincode,
-          country: preset.country,
-        }
-      : { name: defaultName, country: "India" },
-  });
-
-  const [saveAddress, setSaveAddress] = React.useState(false);
+  const refreshAddresses = React.useCallback(async () => {
+    const res = await fetch("/api/addresses");
+    if (!res.ok) return;
+    const data: { addresses: SavedAddress[] } = await res.json();
+    setAddresses(data.addresses);
+    setSelectedAddress((current) => {
+      if (!current) return data.addresses.find((a) => a.isDefault) ?? data.addresses[0] ?? null;
+      // Keep the current pick, refreshed — or fall back if it was deleted.
+      return (
+        data.addresses.find((a) => a.id === current.id) ??
+        data.addresses.find((a) => a.isDefault) ??
+        data.addresses[0] ??
+        null
+      );
+    });
+  }, []);
 
   // Coupon state
   const [couponDraft, setCouponDraft] = React.useState("");
@@ -179,8 +176,20 @@ export function CheckoutClient({
     rzp.open();
   }
 
-  async function onSubmit(address: AddressInput) {
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
     if (items.length === 0) return;
+
+    if (!selectedAddress) {
+      toast.error("Add a shipping address to continue.");
+      return;
+    }
+
+    // Strip the client-only fields before sending; the API validates the rest.
+    const { id: _id, isDefault: _isDefault, ...address } = selectedAddress;
+    void _id;
+    void _isDefault;
+
     setPending(true);
 
     const res = await fetch("/api/checkout", {
@@ -193,7 +202,7 @@ export function CheckoutClient({
           qty: i.qty,
         })),
         address,
-        saveAddress,
+        saveAddress: false, // already stored in the address book
         couponCode: coupon?.code,
         redeemPoints: pointsRedeemed,
       }),
@@ -256,51 +265,31 @@ export function CheckoutClient({
     );
   }
 
-  const field = (
-    id: keyof AddressInput,
-    label: string,
-    props: React.ComponentProps<typeof Input> = {}
-  ) => (
-    <div className="space-y-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      <Input id={id} {...register(id)} {...props} />
-      {errors[id] && <p className="text-xs text-destructive">{errors[id]?.message}</p>}
-    </div>
-  );
-
   return (
     <>
-      <form onSubmit={handleSubmit(onSubmit)} className="grid gap-8 lg:grid-cols-[1fr_360px]">
+      <form onSubmit={onSubmit} className="grid gap-8 lg:grid-cols-[1fr_360px]">
         {/* Address */}
         <section className="space-y-4">
           <div className="rounded-xl border border-border p-6">
-            <h2 className="mb-4 font-display text-xl font-bold uppercase">Shipping address</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {field("name", "Full name", { autoComplete: "name", placeholder: "Ravi Kumar" })}
-              {field("phone", "Mobile number", {
-                inputMode: "numeric",
-                autoComplete: "tel",
-                placeholder: "9876543210",
-              })}
-              <div className="sm:col-span-2">
-                {field("line1", "Address line 1", { placeholder: "House / flat, street" })}
-              </div>
-              <div className="sm:col-span-2">
-                {field("line2", "Address line 2 (optional)", { placeholder: "Area, landmark" })}
-              </div>
-              {field("city", "City", { placeholder: "Mumbai" })}
-              {field("state", "State", { placeholder: "Maharashtra" })}
-              {field("pincode", "Pincode", { inputMode: "numeric", placeholder: "400001" })}
-              {field("country", "Country", { readOnly: true })}
-            </div>
+            <h2 className="mb-1 font-display text-xl font-bold uppercase">Shipping address</h2>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Pick where this order should go, or add a new address.
+            </p>
 
-            <label className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-              <Checkbox
-                checked={saveAddress}
-                onCheckedChange={(v) => setSaveAddress(Boolean(v))}
-              />
-              Save this address for next time
-            </label>
+            <AddressBook
+              addresses={addresses}
+              selectedId={selectedAddress?.id ?? null}
+              onSelect={setSelectedAddress}
+              onChanged={refreshAddresses}
+              defaultName={defaultName}
+            />
+
+            {!selectedAddress && addresses.length > 0 && (
+              <p className="mt-3 flex items-center gap-1.5 text-sm text-destructive">
+                <AlertCircle className="size-4" />
+                Select an address to continue.
+              </p>
+            )}
           </div>
 
           <p className="flex items-center gap-2 text-xs text-muted-foreground">
