@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Heart } from "lucide-react";
 import { auth } from "@/auth";
-import { mainNav } from "@/lib/site";
+import { MainNavLinks } from "./main-nav-links";
 import type { Role } from "@/server/rbac";
 import { Logo } from "@/components/shared/logo";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
@@ -50,17 +50,7 @@ export async function Navbar() {
 
       {/* Nav row (desktop) */}
       <nav className="hidden border-t border-border lg:block">
-        <div className="container-5xl flex h-11 items-center gap-6">
-          {mainNav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </div>
+        <MainNavLinks />
       </nav>
 
       {/* Search (mobile) */}

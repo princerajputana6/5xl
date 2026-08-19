@@ -3,7 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { Menu } from "lucide-react";
-import { mainNav, shopByGoal } from "@/lib/site";
+import { shopByGoal } from "@/lib/site";
+import { MobileNavLinks } from "./main-nav-links";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -31,16 +32,7 @@ export function MobileNav() {
           </SheetTitle>
         </SheetHeader>
         <nav className="mt-2 flex flex-col px-4 pb-6">
-          {mainNav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setOpen(false)}
-              className="border-b border-border py-3 font-display text-lg font-semibold uppercase tracking-wide"
-            >
-              {item.label}
-            </Link>
-          ))}
+          <MobileNavLinks onNavigate={() => setOpen(false)} />
 
           <p className="mt-6 mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Shop by goal
