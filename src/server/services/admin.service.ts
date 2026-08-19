@@ -170,9 +170,34 @@ export type AdminProductRow = {
   isBestseller: boolean;
 };
 
+/** Stock buckets offered as quick filters in the admin list. */
+export const STOCK_FILTERS = ["all", "out", "low", "in"] as const;
+export type StockFilter = (typeof STOCK_FILTERS)[number];
+
+/** Threshold below which stock is flagged as "low" (0 excluded — that's "out"). */
+export const LOW_STOCK_THRESHOLD = 5;
+
+export const PRODUCT_SORTS = {
+  newest: { createdAt: -1 },
+  oldest: { createdAt: 1 },
+  "name-asc": { name: 1 },
+  "name-desc": { name: -1 },
+  "price-asc": { price: 1 },
+  "price-desc": { price: -1 },
+  "stock-asc": { stock: 1 },
+  "stock-desc": { stock: -1 },
+} as const;
+
+export type ProductSort = keyof typeof PRODUCT_SORTS;
+
 export async function listAdminProducts(params: {
   q?: string;
   status?: string;
+  stock?: string;
+  brand?: string;
+  category?: string;
+  flag?: string;
+  sort?: string;
   page?: number;
   pageSize?: number;
 }): Promise<{ rows: AdminProductRow[]; total: number; page: number; pages: number }> {
@@ -182,11 +207,30 @@ export async function listAdminProducts(params: {
 
   const filter: Record<string, unknown> = {};
   if (params.status && params.status !== "all") filter.status = params.status;
-  if (params.q) filter.name = { $regex: params.q.trim(), $options: "i" };
+
+  if (params.q) {
+    // Match the name or the SKU so admins can paste either.
+    const rx = { $regex: params.q.trim(), $options: "i" };
+    filter.$or = [{ name: rx }, { sku: rx }];
+  }
+
+  if (params.stock === "out") filter.stock = { $lte: 0 };
+  else if (params.stock === "low") filter.stock = { $gt: 0, $lte: LOW_STOCK_THRESHOLD };
+  else if (params.stock === "in") filter.stock = { $gt: LOW_STOCK_THRESHOLD };
+
+  if (params.brand && params.brand !== "all") filter.brand = params.brand;
+  if (params.category && params.category !== "all") filter.category = params.category;
+
+  if (params.flag === "featured") filter.isFeatured = true;
+  else if (params.flag === "bestseller") filter.isBestseller = true;
+  else if (params.flag === "no-image") filter.images = { $size: 0 };
+
+  const sortKey = (params.sort ?? "newest") as ProductSort;
+  const sort = PRODUCT_SORTS[sortKey] ?? PRODUCT_SORTS.newest;
 
   const [docs, total] = await Promise.all([
     Product.find(filter)
-      .sort({ createdAt: -1 })
+      .sort(sort)
       .skip((page - 1) * pageSize)
       .limit(pageSize)
       .populate("brand", "name")
@@ -243,6 +287,26 @@ export async function getProductForAdmin(id: string): Promise<AdminProductForm |
     status: (p.status as AdminProductInput["status"]) ?? "active",
     isFeatured: Boolean(p.isFeatured),
     isBestseller: Boolean(p.isBestseller),
+    benefits: (p.benefits as string[] | undefined) ?? [],
+    ingredients: (p.ingredients as string[] | undefined) ?? [],
+    usage: p.usage ?? "",
+    nutritionFacts: (p.nutritionFacts ?? []).map((n) => ({
+      label: n.label,
+      value: n.value,
+    })),
+    variants: (p.variants ?? []).map((v) => ({
+      label: v.label,
+      flavour: v.flavour ?? undefined,
+      size: v.size ?? undefined,
+      sku: v.sku,
+      price: v.price,
+      mrp: v.mrp,
+      stock: v.stock ?? 0,
+    })),
+    seo: {
+      title: p.seo?.title ?? "",
+      description: p.seo?.description ?? "",
+    },
   };
 }
 
@@ -316,6 +380,25 @@ export async function getProductFormOptions(): Promise<{
     brands: brands.map((b) => ({ id: String(b._id), name: b.name })),
     categories: categories.map((c) => ({ id: String(c._id), name: c.name })),
   };
+}
+
+/** Counts behind the admin list's quick filters. */
+export async function getProductStockSummary(): Promise<{
+  all: number;
+  out: number;
+  low: number;
+  in: number;
+  noImage: number;
+}> {
+  await connectDB();
+  const [all, out, low, inStock, noImage] = await Promise.all([
+    Product.countDocuments({}),
+    Product.countDocuments({ stock: { $lte: 0 } }),
+    Product.countDocuments({ stock: { $gt: 0, $lte: LOW_STOCK_THRESHOLD } }),
+    Product.countDocuments({ stock: { $gt: LOW_STOCK_THRESHOLD } }),
+    Product.countDocuments({ images: { $size: 0 } }),
+  ]);
+  return { all, out, low, in: inStock, noImage };
 }
 
 // ---- customers (read-only) --------------------------------------------

@@ -11,6 +11,7 @@ import {
   Ticket,
   Star,
   Store,
+  TrendingUp,
   Menu,
   X,
 } from "lucide-react";
@@ -27,6 +28,7 @@ type NavItem = {
 const NAV: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart, perm: "orders:read" },
+  { href: "/admin/sales", label: "Sales & Analytics", icon: TrendingUp, perm: "reports:read" },
   { href: "/admin/products", label: "Products", icon: Package, perm: "products:read" },
   { href: "/admin/coupons", label: "Coupons", icon: Ticket, perm: "coupons:write" },
   { href: "/admin/reviews", label: "Reviews", icon: Star, perm: "cms:write" },
@@ -79,7 +81,10 @@ export function AdminShell({
   return (
     <div className="min-h-dvh bg-background lg:grid lg:grid-cols-[260px_1fr]">
       {/* Desktop sidebar */}
-      <aside className="hidden border-r border-border bg-card/40 p-4 lg:flex lg:flex-col">
+      <aside
+        data-admin-chrome
+        className="hidden border-r border-border bg-card/40 p-4 lg:flex lg:flex-col"
+      >
         <Link href="/admin" className="mb-6 flex items-center gap-2 px-2">
           <span className="font-display text-2xl font-extrabold uppercase tracking-tight">
             5<span className="text-primary">XL</span>
@@ -104,7 +109,10 @@ export function AdminShell({
       </aside>
 
       {/* Mobile top bar */}
-      <div className="flex items-center justify-between border-b border-border p-4 lg:hidden">
+      <div
+        data-admin-chrome
+        className="flex items-center justify-between border-b border-border p-4 lg:hidden"
+      >
         <Link href="/admin" className="font-display text-xl font-extrabold uppercase">
           5<span className="text-primary">XL</span> Admin
         </Link>
@@ -124,7 +132,7 @@ export function AdminShell({
         </div>
       )}
 
-      <main className="min-w-0 p-4 md:p-8">{children}</main>
+      <main className="min-w-0 p-4 md:p-8 print:p-0">{children}</main>
     </div>
   );
 }

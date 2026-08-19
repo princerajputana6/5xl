@@ -157,6 +157,37 @@
 }
 
 /* ------------------------------------------------------------------ */
+/* Print                                                               */
+/* ------------------------------------------------------------------ */
+/* Admin reports print to PDF via the browser dialog — drop the app
+   chrome and the dark theme so the output is a clean document. */
+@media print {
+  [data-admin-chrome] {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  @page {
+    margin: 14mm;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Accordion panel height                                              */
+/* ------------------------------------------------------------------ */
+/* The accordion keyframes animate height but run with fill-mode "none",
+   so a panel would snap back to its base height the instant the open
+   animation finished. Pin the two end states explicitly. */
+[data-slot="accordion-content"] {
+  height: 0;
+}
+[data-slot="accordion-content"][data-state="open"] {
+  height: var(--radix-accordion-content-height);
+}
+
+/* ------------------------------------------------------------------ */
 /* Protein-themed custom cursor                                        */
 /* ------------------------------------------------------------------ */
 @media (pointer: fine) {
@@ -186,9 +217,6 @@ html.cursor-visible .protein-cursor-root {
   height: 30px;
   will-change: transform;
   transition: scale 0.18s ease;
-}
-.protein-cursor-dumbbell.is-active {
-  scale: 1.35;
 }
 .protein-cursor-dumbbell.is-down {
   scale: 0.82;
@@ -227,12 +255,6 @@ html.cursor-visible .protein-cursor-root {
     height 0.22s ease,
     background 0.22s ease,
     border-color 0.22s ease;
-}
-.protein-cursor-ring.is-active {
-  width: 56px;
-  height: 56px;
-  background: color-mix(in oklch, var(--primary), transparent 85%);
-  border-color: color-mix(in oklch, var(--primary), transparent 20%);
 }
 .protein-cursor-ring.is-down {
   width: 26px;

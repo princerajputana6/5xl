@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Check, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { auth } from "@/auth";
 import {
   getProductBySlug,
   getRelatedProducts,
+  getProductOptions,
 } from "@/server/services/catalog.service";
+import { listPublicOffers } from "@/server/services/coupon.service";
 import { getWishlistProductIds } from "@/server/services/wishlist.service";
 import {
   listProductReviews,
@@ -18,12 +20,17 @@ import { ProductPurchasePanel } from "@/components/shop/product-purchase-panel";
 import { ProductCard } from "@/components/shop/product-card";
 import { Rating } from "@/components/shop/rating";
 import { ReviewsSection } from "@/components/shop/reviews-section";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { PriceCard } from "@/components/shop/price-card";
+import { OffersStrip } from "@/components/shop/offers-strip";
+import { OptionSwatches } from "@/components/shop/option-swatches";
+import { PincodeChecker } from "@/components/shop/pincode-checker";
+import { KeyBenefits } from "@/components/shop/key-benefits";
+import { FrequentlyBoughtTogether } from "@/components/shop/frequently-bought-together";
+import { AboutProduct } from "@/components/shop/about-product";
+import { ProductFaqs } from "@/components/shop/product-faqs";
+import { getProductFaqs } from "@/lib/product-faq";
+import { getKeyBenefits, getUsage, getServingInfo } from "@/lib/product-content";
+import { cn } from "@/lib/utils";
 
 export async function generateMetadata({
   params,
@@ -49,11 +56,13 @@ export default async function ProductDetailPage({
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const [related, session, reviews, reviewSummary] = await Promise.all([
-    getRelatedProducts(product.slug, product.categorySlug, 4),
+  const [related, session, reviews, reviewSummary, options, offers] = await Promise.all([
+    getRelatedProducts(product.slug, product.categorySlug, 6),
     auth(),
     listProductReviews(product.id),
     getReviewSummary(product.id),
+    getProductOptions(product.name, product.slug),
+    listPublicOffers(),
   ]);
 
   const userId = session?.user?.id;
@@ -63,6 +72,8 @@ export default async function ProductDetailPage({
       : Promise.resolve(false),
     userId ? getUserReview(userId, product.id) : Promise.resolve(null),
   ]);
+
+  const servingInfo = getServingInfo(product.name, product.categorySlug);
 
   return (
     <div className="container-5xl py-8">
@@ -83,7 +94,12 @@ export default async function ProductDetailPage({
 
       {/* Main */}
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
-        <ProductGallery images={product.images} name={product.name} />
+        <ProductGallery
+          images={product.images}
+          name={product.name}
+          productId={product.id}
+          initialInWishlist={inWishlist}
+        />
 
         <div className="space-y-5">
           {product.brandName && (
@@ -94,94 +110,100 @@ export default async function ProductDetailPage({
               {product.brandName}
             </Link>
           )}
+
           <h1 className="font-display text-3xl font-extrabold uppercase leading-tight tracking-tight md:text-4xl">
             {product.name}
           </h1>
-          <div className="flex items-center gap-3">
-            <Rating value={product.rating} count={product.reviewCount} size="md" />
-          </div>
-          {product.shortDescription && (
-            <p className="text-muted-foreground">{product.shortDescription}</p>
+
+          {servingInfo && (
+            <p className="inline-block rounded-lg bg-primary/15 px-3 py-1.5 text-sm font-medium">
+              {servingInfo}
+            </p>
           )}
 
-          <ProductPurchasePanel product={product} initialInWishlist={inWishlist} />
+          <Rating value={product.rating} count={product.reviewCount} size="md" />
 
-          {product.benefits.length > 0 && (
-            <ul className="grid gap-2 pt-2 sm:grid-cols-2">
-              {product.benefits.map((b) => (
-                <li key={b} className="flex items-start gap-2 text-sm">
-                  <Check className="mt-0.5 size-4 shrink-0 text-primary" />
-                  <span>{b}</span>
-                </li>
-              ))}
-            </ul>
-          )}
+          <PriceCard price={product.price} mrp={product.mrp} />
+
+          <p className={cn("text-sm font-medium", product.inStock ? "text-success" : "text-destructive")}>
+            {product.inStock ? "✓ In stock — ready to ship" : "Out of stock"}
+          </p>
+
+          <OffersStrip offers={offers} />
+
+          <OptionSwatches label="Flavour" current={options.currentFlavour} options={options.flavours} />
+          <OptionSwatches label="Size" current={options.currentSize} options={options.sizes} />
+
+          <ProductPurchasePanel product={product} />
+
+          <PincodeChecker />
         </div>
       </div>
 
-      {/* Details tabs */}
-      <div className="mt-14">
-        <Tabs defaultValue="description">
-          <TabsList className="flex-wrap">
-            <TabsTrigger value="description">Description</TabsTrigger>
-            {product.nutritionFacts.length > 0 && (
-              <TabsTrigger value="nutrition">Nutrition</TabsTrigger>
-            )}
-            {product.ingredients.length > 0 && (
-              <TabsTrigger value="ingredients">Ingredients</TabsTrigger>
-            )}
-            {product.usage && <TabsTrigger value="usage">How to use</TabsTrigger>}
-            <TabsTrigger value="reviews">Reviews</TabsTrigger>
-          </TabsList>
+      <KeyBenefits benefits={getKeyBenefits(product.categorySlug)} />
 
-          <TabsContent value="description" className="max-w-3xl pt-6 leading-relaxed text-muted-foreground">
-            {product.description}
-          </TabsContent>
+      <FrequentlyBoughtTogether product={product} suggestions={related} />
 
-          <TabsContent value="nutrition" className="pt-6">
-            <div className="max-w-md overflow-hidden rounded-lg border border-border">
-              <table className="w-full text-sm">
-                <tbody>
-                  {product.nutritionFacts.map((n, i) => (
-                    <tr key={n.label} className={i % 2 ? "bg-muted/40" : ""}>
-                      <td className="px-4 py-2.5 font-medium">{n.label}</td>
-                      <td className="px-4 py-2.5 text-right text-muted-foreground">{n.value}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </TabsContent>
+      <AboutProduct
+        description={product.description}
+        benefits={product.benefits}
+        usage={getUsage(product.usage, product.categorySlug)}
+      />
 
-          <TabsContent value="ingredients" className="max-w-3xl pt-6">
-            <div className="flex flex-wrap gap-2">
-              {product.ingredients.map((ing) => (
-                <span key={ing} className="rounded-full border border-border bg-muted/40 px-3 py-1 text-sm">
-                  {ing}
-                </span>
-              ))}
-            </div>
-          </TabsContent>
+      {/* Nutrition facts */}
+      {product.nutritionFacts.length > 0 && (
+        <section className="mt-10">
+          <h2 className="mb-4 font-display text-2xl font-extrabold uppercase tracking-tight">
+            Nutrition Facts
+          </h2>
+          <div className="max-w-md overflow-hidden rounded-lg border border-border">
+            <table className="w-full text-sm">
+              <tbody>
+                {product.nutritionFacts.map((n, i) => (
+                  <tr key={n.label} className={i % 2 ? "bg-muted/40" : ""}>
+                    <td className="px-4 py-2.5 font-medium">{n.label}</td>
+                    <td className="px-4 py-2.5 text-right text-muted-foreground">{n.value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
-          {product.usage && (
-            <TabsContent value="usage" className="max-w-3xl pt-6 leading-relaxed text-muted-foreground">
-              {product.usage}
-            </TabsContent>
-          )}
+      {/* Ingredients */}
+      {product.ingredients.length > 0 && (
+        <section className="mt-10 max-w-3xl">
+          <h2 className="mb-4 font-display text-2xl font-extrabold uppercase tracking-tight">
+            Ingredients
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {product.ingredients.map((ing) => (
+              <span key={ing} className="rounded-full border border-border bg-muted/40 px-3 py-1 text-sm">
+                {ing}
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
 
-          <TabsContent value="reviews" className="pt-6">
-            <ReviewsSection
-              slug={product.slug}
-              reviews={reviews}
-              summary={reviewSummary}
-              fallbackRating={product.rating}
-              fallbackCount={product.reviewCount}
-              canReview={Boolean(userId)}
-              myReview={myReview}
-            />
-          </TabsContent>
-        </Tabs>
-      </div>
+      <ProductFaqs faqs={getProductFaqs(product.categorySlug)} />
+
+      {/* Ratings & Reviews */}
+      <section className="mt-14">
+        <h2 className="mb-6 font-display text-2xl font-extrabold uppercase tracking-tight">
+          Ratings &amp; Reviews
+        </h2>
+        <ReviewsSection
+          slug={product.slug}
+          reviews={reviews}
+          summary={reviewSummary}
+          fallbackRating={product.rating}
+          fallbackCount={product.reviewCount}
+          canReview={Boolean(userId)}
+          myReview={myReview}
+        />
+      </section>
 
       {/* Related */}
       {related.length > 0 && (

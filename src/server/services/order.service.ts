@@ -231,6 +231,38 @@ export async function markOrderFailed(gatewayOrderId: string): Promise<void> {
   await order.save();
 }
 
+/**
+ * Cancel an order the shopper never paid for. Stock is only decremented once a
+ * payment confirms, so an unpaid cancel has nothing to restore. Paid orders are
+ * refused here — those need a refund, which is an admin action.
+ */
+export async function cancelPendingOrder(
+  userId: string,
+  orderNumber: string
+): Promise<void> {
+  await connectDB();
+  const order = await Order.findOne({ user: userId, orderNumber });
+  if (!order) throw new HttpError("Order not found.", 404);
+
+  if (order.status === "cancelled") return; // already done — treat as success
+
+  if (order.payment?.status === "paid" || order.status !== "pending") {
+    throw new HttpError(
+      "Only orders awaiting payment can be cancelled. Contact support for help with this order.",
+      409
+    );
+  }
+
+  order.status = "cancelled";
+  order.payment = { ...order.payment, status: "failed" } as OrderDoc["payment"];
+  order.timeline.push({
+    status: "cancelled",
+    note: "Cancelled by you before payment.",
+    at: new Date(),
+  } as OrderDoc["timeline"][number]);
+  await order.save();
+}
+
 // ---- reads -------------------------------------------------------------
 
 export function toOrderDTO(o: OrderDoc): OrderDTO {

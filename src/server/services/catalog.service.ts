@@ -10,6 +10,7 @@ import type {
   ListResult,
   SortValue,
 } from "@/types/catalog";
+import { productFamilyKey, parseFlavour, parseSize } from "@/lib/product-options";
 
 const PAGE_SIZE = 12;
 
@@ -184,6 +185,84 @@ async function findByFlag(flag: "isFeatured" | "isBestseller", limit: number) {
 
 export const getFeaturedProducts = (limit = 8) => findByFlag("isFeatured", limit);
 export const getBestsellers = (limit = 8) => findByFlag("isBestseller", limit);
+
+export type ProductOption = {
+  label: string;
+  slug: string;
+  inStock: boolean;
+  isCurrent: boolean;
+};
+
+export type ProductOptions = {
+  flavours: ProductOption[];
+  sizes: ProductOption[];
+  currentFlavour: string | null;
+  currentSize: string | null;
+};
+
+/**
+ * Flavour and pack-size swatches for a product. The catalogue stores each
+ * flavour/size as its own product, so options are gathered from siblings that
+ * share the same product-family prefix and link across to that product's page.
+ */
+export async function getProductOptions(
+  name: string,
+  slug: string
+): Promise<ProductOptions> {
+  await connectDB();
+
+  const family = productFamilyKey(name);
+  const currentFlavour = parseFlavour(name);
+  const currentSize = parseSize(name);
+
+  const docs = await Product.find({
+    status: "active",
+    name: { $regex: `^${escapeRegex(family)}`, $options: "i" },
+  })
+    .select("name slug stock")
+    .limit(40)
+    .lean();
+
+  const flavours = new Map<string, ProductOption>();
+  const sizes = new Map<string, ProductOption>();
+
+  for (const d of docs) {
+    const inStock = ((d.stock as number) ?? 0) > 0;
+    const isCurrent = d.slug === slug;
+
+    const flavour = parseFlavour(d.name);
+    if (flavour && (!flavours.has(flavour) || isCurrent)) {
+      flavours.set(flavour, { label: flavour, slug: d.slug, inStock, isCurrent });
+    }
+
+    const size = parseSize(d.name);
+    // Only offer sizes within the flavour the shopper is already looking at,
+    // otherwise switching size would silently change flavour too.
+    const sameFlavour = !currentFlavour || flavour === currentFlavour;
+    if (size && sameFlavour && (!sizes.has(size) || isCurrent)) {
+      sizes.set(size, { label: size, slug: d.slug, inStock, isCurrent });
+    }
+  }
+
+  return {
+    flavours: [...flavours.values()].sort(byLabel),
+    sizes: [...sizes.values()].sort(bySize),
+    currentFlavour,
+    currentSize,
+  };
+}
+
+function byLabel(a: ProductOption, b: ProductOption) {
+  return a.label.localeCompare(b.label);
+}
+
+function bySize(a: ProductOption, b: ProductOption) {
+  return (parseFloat(a.label) || 0) - (parseFloat(b.label) || 0);
+}
+
+function escapeRegex(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 export async function getFacets(): Promise<FacetDTO> {
   await connectDB();

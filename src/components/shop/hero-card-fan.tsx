@@ -2,11 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { motion, useReducedMotion } from "motion/react";
 import { Dumbbell, Star } from "lucide-react";
 import type { ProductCardDTO } from "@/types/catalog";
 import { formatINR, discountPct } from "@/lib/format";
+import { ProductImage } from "./product-image";
 
 /**
  * Teen-patti-style fanned "hand" of featured products for the hero's right
@@ -85,17 +85,13 @@ export function HeroCardFan({ products }: { products: ProductCardDTO[] }) {
                 )}
 
                 <div className="relative aspect-[16/10] overflow-hidden bg-neutral-100">
-                  {p.image ? (
-                    <Image
-                      src={p.image}
-                      alt={p.name}
-                      fill
-                      sizes="480px"
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="grid h-full place-items-center text-8xl">🥤</div>
-                  )}
+                  <ProductImage
+                    src={p.image}
+                    alt={p.name}
+                    fill
+                    sizes="480px"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
                 </div>
 
                 <div className="p-5">

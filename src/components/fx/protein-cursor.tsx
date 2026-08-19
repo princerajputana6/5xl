@@ -6,8 +6,8 @@ import * as React from "react";
  * Custom, gym-themed pointer for fine-pointer devices:
  *  - a glowing yellow **dumbbell** that tracks the pointer 1:1 and tilts with
  *    your movement direction,
- *  - a soft ring that lags behind with easing and swells over interactive
- *    targets (the dumbbell pumps up with it),
+ *  - a soft ring that lags behind with easing, staying locked to the
+ *    dumbbell's size at all times (no separate hover state),
  *  - a "protein powder" spark trail that scatters as you move.
  *
  * Pure rAF + direct style writes (no React re-renders) so it stays smooth.
@@ -67,13 +67,6 @@ export function ProteinCursor() {
         visible = true;
         document.documentElement.classList.add("cursor-visible");
       }
-
-      const target = e.target as Element | null;
-      const interactive = !!target?.closest?.(
-        "a, button, input, textarea, select, [role=button], label, summary, [data-cursor='grow']"
-      );
-      ring()?.classList.toggle("is-active", interactive);
-      db()?.classList.toggle("is-active", interactive);
 
       const now = performance.now();
       if (now - lastSpark > 38) {

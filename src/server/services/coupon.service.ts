@@ -9,6 +9,40 @@ export type AppliedCoupon = {
   label: string;
 };
 
+export type PublicOffer = {
+  code: string;
+  description: string;
+  type: "percent" | "flat";
+  value: number;
+  minOrder: number;
+};
+
+/** Currently-live coupons, for the offers strip on product pages. */
+export async function listPublicOffers(limit = 3): Promise<PublicOffer[]> {
+  await connectDB();
+  const now = new Date();
+  const docs = await Coupon.find({
+    isActive: true,
+    $and: [
+      { $or: [{ startsAt: { $exists: false } }, { startsAt: null }, { startsAt: { $lte: now } }] },
+      { $or: [{ expiresAt: { $exists: false } }, { expiresAt: null }, { expiresAt: { $gte: now } }] },
+    ],
+  })
+    .sort({ minOrder: 1 })
+    .limit(limit)
+    .lean();
+
+  return docs
+    .filter((c) => !c.usageLimit || (c.usedCount ?? 0) < c.usageLimit)
+    .map((c) => ({
+      code: c.code,
+      description: c.description ?? "",
+      type: c.type as "percent" | "flat",
+      value: c.value,
+      minOrder: c.minOrder ?? 0,
+    }));
+}
+
 /**
  * Validate a coupon against a server-computed subtotal and return the discount.
  * Throws HttpError with a user-facing message when invalid.
