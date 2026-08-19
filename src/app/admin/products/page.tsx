@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { Plus, Pencil } from "lucide-react";
 import { requirePermission, getCurrentUser } from "@/lib/session";
 import { listAdminProducts } from "@/server/services/admin.service";
@@ -7,6 +6,7 @@ import { hasPermission, type Role } from "@/server/rbac";
 import { formatINR } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { ProductStatusSelect } from "@/components/admin/product-status-select";
+import { ProductImage } from "@/components/shop/product-image";
 
 export const metadata = { title: "Products" };
 
@@ -56,11 +56,7 @@ export default async function AdminProductsPage({
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <div className="relative size-10 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
-                      {p.image ? (
-                        <Image src={p.image} alt={p.name} fill sizes="40px" className="object-cover" />
-                      ) : (
-                        <span className="grid h-full place-items-center">🥤</span>
-                      )}
+                      <ProductImage src={p.image} alt={p.name} fill sizes="40px" className="object-cover" />
                     </div>
                     <div>
                       <p className="font-medium">{p.name}</p>

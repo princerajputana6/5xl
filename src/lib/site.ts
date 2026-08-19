@@ -22,7 +22,7 @@ export type NavItem = {
 /** Primary storefront navigation (placeholder data for M1). */
 export const mainNav: NavItem[] = [
   { label: "Shop All", href: "/products" },
-  { label: "Protein", href: "/products?category=protein" },
+  { label: "Protein", href: "/products?category=performance-protein" },
   { label: "Creatine", href: "/products?category=creatine" },
   { label: "Mass Gainer", href: "/products?category=mass-gainer" },
   { label: "Pre-Workout", href: "/products?category=pre-workout" },

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import Image from "next/image";
 import type { ProductCardDTO } from "@/types/catalog";
+import { ProductImage } from "./product-image";
 import { Rating } from "./rating";
 import { PriceBox } from "./price-box";
 import { AddToCartButton } from "./add-to-cart-button";
@@ -25,17 +25,13 @@ export function ProductCard({
           aria-label={product.name}
           className="absolute inset-0 block"
         >
-          {product.image ? (
-            <Image
-              src={product.image}
-              alt={product.name}
-              fill
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-          ) : (
-            <div className="grid h-full place-items-center text-4xl">🥤</div>
-          )}
+          <ProductImage
+            src={product.image}
+            alt={product.name}
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
+          />
         </Link>
 
         <div className="absolute left-2 top-2 flex flex-col gap-1">

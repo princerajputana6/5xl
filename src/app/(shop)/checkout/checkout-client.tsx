@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -12,6 +11,7 @@ import { useCart } from "@/components/providers/cart-provider";
 import { addressSchema, type AddressInput } from "@/lib/validators/checkout";
 import { computeAmounts } from "@/lib/cart-pricing";
 import { formatINR } from "@/lib/format";
+import { ProductImage } from "@/components/shop/product-image";
 import type { CheckoutSession } from "@/types/order";
 import type { SavedAddress } from "@/server/services/address.service";
 import { Button } from "@/components/ui/button";
@@ -316,11 +316,7 @@ export function CheckoutClient({
             {items.map((item) => (
               <li key={`${item.productId}-${item.variantId}`} className="flex gap-3">
                 <div className="relative size-14 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
-                  {item.image ? (
-                    <Image src={item.image} alt={item.name} fill sizes="56px" className="object-cover" />
-                  ) : (
-                    <span className="grid h-full place-items-center text-xl">🥤</span>
-                  )}
+                  <ProductImage src={item.image} alt={item.name} fill sizes="56px" className="object-cover" />
                   <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
                     {item.qty}
                   </span>
