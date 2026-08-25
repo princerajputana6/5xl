@@ -45,10 +45,11 @@ export default async function AdminOrderDetail({
         <OrderStatusBadge status={order.status} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px] [&>*]:min-w-0">
         <div className="space-y-6">
-          <div className="overflow-hidden rounded-xl border border-border">
-            <table className="w-full text-sm">
+          {/* Scrolls on narrow screens instead of squashing four columns. */}
+          <div className="overflow-x-auto rounded-xl border border-border">
+            <table className="w-full min-w-[34rem] text-sm">
               <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3 font-medium">Item</th>

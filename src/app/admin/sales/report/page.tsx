@@ -27,14 +27,14 @@ export default async function SalesReportPage({
     <>
       <PrintTrigger />
 
-      <div className="mx-auto max-w-4xl bg-white p-10 text-black print:p-0">
+      <div className="mx-auto max-w-4xl bg-white p-5 text-black sm:p-10 print:p-0">
         {/* Masthead */}
-        <header className="flex items-start justify-between border-b-4 border-black pb-4">
+        <header className="flex flex-col gap-3 border-b-4 border-black pb-4 sm:flex-row sm:items-start sm:justify-between print:flex-row print:items-start print:justify-between">
           <div>
             <p className="text-2xl font-extrabold uppercase tracking-tight">5XL Nutrition</p>
             <p className="text-sm text-neutral-600">Sales &amp; analytics report</p>
           </div>
-          <div className="text-right text-sm">
+          <div className="text-sm sm:text-right print:text-right">
             <p className="font-semibold">{report.rangeLabel}</p>
             <p className="text-neutral-600">
               {report.from ? `${formatDate(report.from)} — ` : "Up to "}
@@ -49,7 +49,7 @@ export default async function SalesReportPage({
         {/* Headline numbers */}
         <section className="mt-8">
           <h2 className="mb-3 text-sm font-bold uppercase tracking-wide">Summary</h2>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 print:grid-cols-4">
             {[
               { label: "Revenue", value: formatINR(totals.revenue) },
               { label: "Orders", value: String(totals.orders) },
@@ -63,7 +63,7 @@ export default async function SalesReportPage({
             ))}
           </div>
 
-          <div className="mt-3 grid grid-cols-3 gap-3">
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 print:grid-cols-3">
             {[
               { label: "Discounts given", value: formatINR(totals.discountGiven) },
               { label: "Shipping collected", value: formatINR(totals.shippingCollected) },
@@ -81,6 +81,7 @@ export default async function SalesReportPage({
         {report.trend.length > 0 && (
           <section className="mt-8 break-inside-avoid">
             <h2 className="mb-3 text-sm font-bold uppercase tracking-wide">Revenue by period</h2>
+            <div className="overflow-x-auto print:overflow-visible">
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b-2 border-black text-left">
@@ -99,6 +100,7 @@ export default async function SalesReportPage({
                 ))}
               </tbody>
             </table>
+            </div>
           </section>
         )}
 
@@ -106,6 +108,7 @@ export default async function SalesReportPage({
         {report.topProducts.length > 0 && (
           <section className="mt-8 break-inside-avoid">
             <h2 className="mb-3 text-sm font-bold uppercase tracking-wide">Top products</h2>
+            <div className="overflow-x-auto print:overflow-visible">
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b-2 border-black text-left">
@@ -126,6 +129,7 @@ export default async function SalesReportPage({
                 ))}
               </tbody>
             </table>
+            </div>
           </section>
         )}
 
@@ -133,6 +137,7 @@ export default async function SalesReportPage({
         {report.statusBreakdown.length > 0 && (
           <section className="mt-8 break-inside-avoid">
             <h2 className="mb-3 text-sm font-bold uppercase tracking-wide">Order status mix</h2>
+            <div className="overflow-x-auto print:overflow-visible">
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b-2 border-black text-left">
@@ -151,6 +156,7 @@ export default async function SalesReportPage({
                 ))}
               </tbody>
             </table>
+            </div>
           </section>
         )}
 
@@ -158,6 +164,7 @@ export default async function SalesReportPage({
         {report.coupons.length > 0 && (
           <section className="mt-8 break-inside-avoid">
             <h2 className="mb-3 text-sm font-bold uppercase tracking-wide">Coupon performance</h2>
+            <div className="overflow-x-auto print:overflow-visible">
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b-2 border-black text-left">
@@ -176,6 +183,7 @@ export default async function SalesReportPage({
                 ))}
               </tbody>
             </table>
+            </div>
           </section>
         )}
 

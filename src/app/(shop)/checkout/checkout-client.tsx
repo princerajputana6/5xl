@@ -267,7 +267,7 @@ export function CheckoutClient({
 
   return (
     <>
-      <form onSubmit={onSubmit} className="grid gap-8 lg:grid-cols-[1fr_360px]">
+      <form onSubmit={onSubmit} className="grid gap-8 lg:grid-cols-[1fr_360px] [&>*]:min-w-0">
         {/* Address */}
         <section className="space-y-4">
           <div className="rounded-xl border border-border p-6">

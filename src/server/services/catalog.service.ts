@@ -16,6 +16,17 @@ const PAGE_SIZE = 12;
 
 type PopulatedRef = { name?: string; slug?: string } | null | undefined;
 
+/**
+ * The imported catalogue's supplier brand doc ("Beastlife") gets restored by
+ * the external import job on every reseed, so renaming it in the database
+ * doesn't stick. The storefront always sells under 5XL, so the display name
+ * is normalized here instead — the one place every listing/detail view reads
+ * brandName from.
+ */
+function displayBrandName(rawName: string | undefined): string | null {
+  return rawName ? "5XL Nutrition" : null;
+}
+
 function toCardDTO(p: Record<string, unknown>): ProductCardDTO {
   const brand = p.brand as PopulatedRef;
   const category = p.category as PopulatedRef;
@@ -29,7 +40,7 @@ function toCardDTO(p: Record<string, unknown>): ProductCardDTO {
     mrp: p.mrp as number,
     rating: (p.rating as number) ?? 0,
     reviewCount: (p.reviewCount as number) ?? 0,
-    brandName: brand?.name ?? null,
+    brandName: displayBrandName(brand?.name),
     categorySlug: category?.slug ?? null,
     shortDescription: p.shortDescription as string | undefined,
     isBestseller: Boolean(p.isBestseller),
@@ -277,7 +288,7 @@ export async function getFacets(): Promise<FacetDTO> {
 
   return {
     categories: categories.map((c) => ({ name: c.name, slug: c.slug, emoji: c.emoji ?? undefined })),
-    brands: brands.map((b) => ({ name: b.name, slug: b.slug })),
+    brands: brands.map((b) => ({ name: displayBrandName(b.name) ?? b.name, slug: b.slug })),
     priceRange: {
       min: priceAgg[0]?.min ?? 0,
       max: priceAgg[0]?.max ?? 5000,
@@ -297,7 +308,7 @@ export async function listBrands() {
   const countMap = new Map(counts.map((c) => [String(c._id), c.count]));
   return brands.map((b) => ({
     id: String(b._id),
-    name: b.name,
+    name: displayBrandName(b.name) ?? b.name,
     slug: b.slug,
     description: b.description ?? null,
     logo: b.logo ?? null,

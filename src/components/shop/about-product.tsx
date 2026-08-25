@@ -17,7 +17,7 @@ export function AboutProduct({
 
   return (
     <section className="mt-14">
-      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr] [&>*]:min-w-0">
         {/* Description */}
         <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-7">
           {/* Brand wash in the corner */}

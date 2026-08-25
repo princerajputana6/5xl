@@ -23,6 +23,11 @@ type CartContextValue = {
   updateQty: (productId: string, variantId: string | null, qty: number) => void;
   clear: () => void;
   isHydrated: boolean;
+  /** The line just added/updated by addItem — drives the mobile "added to cart" bar. */
+  lastAdded: CartItem | null;
+  /** True until the shopper dismisses the bar; flips back on the next addItem call. */
+  barOpen: boolean;
+  dismissBar: () => void;
 };
 
 const CartContext = React.createContext<CartContextValue | null>(null);
@@ -34,6 +39,8 @@ const sameLine = (a: CartItem, productId: string, variantId: string | null) =>
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = React.useState<CartItem[]>([]);
   const [isHydrated, setHydrated] = React.useState(false);
+  const [lastAdded, setLastAdded] = React.useState<CartItem | null>(null);
+  const [barOpen, setBarOpen] = React.useState(false);
 
   React.useEffect(() => {
     try {
@@ -50,15 +57,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items, isHydrated]);
 
   const addItem = React.useCallback((item: Omit<CartItem, "qty">, qty = 1) => {
+    let resultingLine: CartItem | null = null;
     setItems((prev) => {
       const idx = prev.findIndex((i) => sameLine(i, item.productId, item.variantId));
       if (idx >= 0) {
         const next = [...prev];
         next[idx] = { ...next[idx], qty: next[idx].qty + qty };
+        resultingLine = next[idx];
         return next;
       }
-      return [...prev, { ...item, qty }];
+      const line = { ...item, qty };
+      resultingLine = line;
+      return [...prev, line];
     });
+    setLastAdded(resultingLine);
+    setBarOpen(true);
   }, []);
 
   const removeItem = React.useCallback((productId: string, variantId: string | null) => {
@@ -76,7 +89,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
-  const clear = React.useCallback(() => setItems([]), []);
+  const clear = React.useCallback(() => {
+    setItems([]);
+    setBarOpen(false);
+  }, []);
+
+  const dismissBar = React.useCallback(() => setBarOpen(false), []);
 
   const totalItems = items.reduce((n, i) => n + i.qty, 0);
   const subtotal = items.reduce((n, i) => n + i.price * i.qty, 0);
@@ -90,6 +108,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     updateQty,
     clear,
     isHydrated,
+    lastAdded,
+    barOpen: barOpen && items.length > 0,
+    dismissBar,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

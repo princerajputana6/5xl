@@ -67,7 +67,7 @@ export default async function ProductsPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[240px_1fr]">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[240px_1fr] [&>*]:min-w-0">
         {/* Sidebar (desktop) */}
         <aside className="hidden lg:block">
           <div className="sticky top-32">

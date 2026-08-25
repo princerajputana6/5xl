@@ -106,7 +106,7 @@ export default function CartPage() {
         </div>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
+      <div className="grid gap-8 lg:grid-cols-[1fr_360px] [&>*]:min-w-0">
         {/* ---- Items ---- */}
         <ul className="space-y-4">
           {items.map((item) => {
@@ -117,17 +117,17 @@ export default function CartPage() {
             return (
               <li
                 key={`${item.productId}-${item.variantId}`}
-                className="group flex gap-4 rounded-xl border border-border bg-card p-4 transition-all duration-300 hover:border-primary/60 hover:shadow-sm"
+                className="group flex gap-3 rounded-xl border border-border bg-card p-3 transition-all duration-300 hover:border-primary/60 hover:shadow-sm sm:gap-4 sm:p-4"
               >
                 <Link
                   href={`/products/${item.slug}`}
-                  className="relative size-24 shrink-0 overflow-hidden rounded-lg border border-border bg-muted"
+                  className="relative size-20 shrink-0 overflow-hidden rounded-lg border border-border bg-muted sm:size-24"
                 >
                   <ProductImage
                     src={item.image}
                     alt={item.name}
                     fill
-                    sizes="96px"
+                    sizes="(max-width: 640px) 80px, 96px"
                     className="object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                 </Link>
@@ -170,7 +170,7 @@ export default function CartPage() {
                     </button>
                   </div>
 
-                  <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-3">
+                  <div className="mt-auto flex flex-wrap items-end justify-between gap-x-3 gap-y-2 pt-3">
                     <QuantitySelector
                       value={item.qty}
                       onChange={(q) => updateQty(item.productId, item.variantId, q)}

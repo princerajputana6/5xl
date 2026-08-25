@@ -5,6 +5,7 @@ import { ThemeProvider } from "./theme-provider";
 import { QueryProvider } from "./query-provider";
 import { CartProvider } from "./cart-provider";
 import { ProteinCursor } from "@/components/fx/protein-cursor";
+import { MobileCartBar } from "@/components/shop/mobile-cart-bar";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -15,7 +16,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       disableTransitionOnChange
     >
       <QueryProvider>
-        <CartProvider>{children}</CartProvider>
+        <CartProvider>
+          {children}
+          <MobileCartBar />
+        </CartProvider>
         <ProteinCursor />
       </QueryProvider>
     </ThemeProvider>

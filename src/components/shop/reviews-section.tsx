@@ -139,7 +139,7 @@ export function ReviewsSection({
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[320px_1fr]">
+    <div className="grid gap-8 lg:grid-cols-[320px_1fr] [&>*]:min-w-0">
       {/* ---- Summary + write panel ---- */}
       <div className="space-y-5 lg:sticky lg:top-28 lg:self-start">
         <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-6">

@@ -232,7 +232,7 @@ export function ProductForm({
 
   return (
     <form onSubmit={submit} className="pb-24">
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px] [&>*]:min-w-0">
         {/* ---- Main column ---- */}
         <div className="space-y-6">
           <Section

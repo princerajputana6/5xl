@@ -77,7 +77,7 @@ export default async function OrderDetailPage({
         <OrderProgress status={order.status} />
       </div>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
+      <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px] [&>*]:min-w-0">
         {/* ---- Items + timeline ---- */}
         <div className="space-y-6">
           <section>
