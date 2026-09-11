@@ -131,8 +131,18 @@ export default async function ProductDetailPage({
 
           <OffersStrip offers={offers} />
 
-          <OptionSwatches label="Flavour" current={options.currentFlavour} options={options.flavours} />
-          <OptionSwatches label="Size" current={options.currentSize} options={options.sizes} />
+          <OptionSwatches
+            label="Flavour"
+            current={options.currentFlavour}
+            options={options.flavours}
+            variant="flavour"
+          />
+          <OptionSwatches
+            label="Size"
+            current={options.currentSize}
+            options={options.sizes}
+            variant="size"
+          />
 
           <ProductPurchasePanel product={product} />
 

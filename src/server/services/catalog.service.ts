@@ -202,6 +202,10 @@ export type ProductOption = {
   slug: string;
   inStock: boolean;
   isCurrent: boolean;
+  image: string | null;
+  price: number | null;
+  /** For size options: price per kg, when the label resolves to a weight. */
+  pricePerKg: number | null;
 };
 
 export type ProductOptions = {
@@ -230,7 +234,7 @@ export async function getProductOptions(
     status: "active",
     name: { $regex: `^${escapeRegex(family)}`, $options: "i" },
   })
-    .select("name slug stock")
+    .select("name slug stock images price")
     .limit(40)
     .lean();
 
@@ -240,10 +244,20 @@ export async function getProductOptions(
   for (const d of docs) {
     const inStock = ((d.stock as number) ?? 0) > 0;
     const isCurrent = d.slug === slug;
+    const image = ((d.images as string[]) ?? [])[0] ?? null;
+    const price = (d.price as number) ?? null;
 
     const flavour = parseFlavour(d.name);
     if (flavour && (!flavours.has(flavour) || isCurrent)) {
-      flavours.set(flavour, { label: flavour, slug: d.slug, inStock, isCurrent });
+      flavours.set(flavour, {
+        label: flavour,
+        slug: d.slug,
+        inStock,
+        isCurrent,
+        image,
+        price,
+        pricePerKg: null,
+      });
     }
 
     const size = parseSize(d.name);
@@ -251,7 +265,15 @@ export async function getProductOptions(
     // otherwise switching size would silently change flavour too.
     const sameFlavour = !currentFlavour || flavour === currentFlavour;
     if (size && sameFlavour && (!sizes.has(size) || isCurrent)) {
-      sizes.set(size, { label: size, slug: d.slug, inStock, isCurrent });
+      sizes.set(size, {
+        label: size,
+        slug: d.slug,
+        inStock,
+        isCurrent,
+        image,
+        price,
+        pricePerKg: price != null ? pricePerKg(size, price) : null,
+      });
     }
   }
 
@@ -269,6 +291,18 @@ function byLabel(a: ProductOption, b: ProductOption) {
 
 function bySize(a: ProductOption, b: ProductOption) {
   return (parseFloat(a.label) || 0) - (parseFloat(b.label) || 0);
+}
+
+/** Converts a size label (e.g. "2KG", "500G") + price into a ₹/kg figure. */
+function pricePerKg(sizeLabel: string, price: number): number | null {
+  const m = sizeLabel.match(/^([\d.]+)\s*(KG|G|GM|GMS)$/i);
+  if (!m) return null;
+  const value = parseFloat(m[1]);
+  if (!value) return null;
+  const unit = m[2].toUpperCase();
+  const kg = unit === "KG" ? value : value / 1000;
+  if (kg <= 0) return null;
+  return Math.round(price / kg);
 }
 
 function escapeRegex(s: string) {

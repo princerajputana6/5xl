@@ -1,75 +1,73 @@
 import Link from "next/link";
-import { ArrowRight, ShieldCheck, Truck, BadgeCheck, FlaskConical } from "lucide-react";
-import { mockCategories, mockGoals, mockFeatures } from "@/lib/mock";
 import { getFeaturedProducts, getBestsellers } from "@/server/services/catalog.service";
+import { listActiveCategories } from "@/server/services/category.service";
+import { getHomeContent } from "@/server/services/home.service";
 import { ProductCard } from "@/components/shop/product-card";
 import { Hero } from "@/components/shop/hero";
+import { CategoryGrid } from "@/components/shop/category-grid";
 import { Reveal, Parallax } from "@/components/fx/scroll-fx";
 import { Button } from "@/components/ui/button";
-
-const featureIcons = [FlaskConical, Truck, ShieldCheck, BadgeCheck];
+import { iconByName } from "@/lib/icon-map";
 
 export default async function HomePage() {
-  const [featured, bestsellers] = await Promise.all([
-    getFeaturedProducts(8),
-    getBestsellers(4),
+  const home = await getHomeContent();
+
+  const [featured, bestsellers, categories] = await Promise.all([
+    home.showFeatured ? getFeaturedProducts(8) : Promise.resolve([]),
+    home.showBestsellers ? getBestsellers(4) : Promise.resolve([]),
+    listActiveCategories(home.featuredCategorySlugs),
   ]);
+
+  const heroContent = home.heroSlides[0];
 
   return (
     <>
       {/* Hero */}
-      <Hero products={featured.slice(0, 5)} />
+      <Hero products={featured.slice(0, 5)} content={heroContent} />
 
       {/* Feature strip */}
-      <section className="relative z-10 border-b border-border bg-background">
-        <div className="container-5xl grid grid-cols-2 gap-6 py-8 md:grid-cols-4">
-          {mockFeatures.map((f, i) => {
-            const Icon = featureIcons[i];
-            return (
-              <div key={f.title} className="flex items-start gap-3">
-                <Icon className="mt-0.5 size-6 shrink-0 text-primary" />
-                <div>
-                  <p className="font-semibold">{f.title}</p>
-                  <p className="text-sm text-muted-foreground">{f.desc}</p>
+      {home.features.length > 0 && (
+        <section className="relative z-10 border-b border-border bg-background">
+          <div className="container-5xl grid grid-cols-2 gap-6 py-8 md:grid-cols-4">
+            {home.features.map((f) => {
+              const Icon = iconByName(f.icon);
+              return (
+                <div key={f.title} className="flex items-start gap-3">
+                  <Icon className="mt-0.5 size-6 shrink-0 text-primary" />
+                  <div>
+                    <p className="font-semibold">{f.title}</p>
+                    {f.desc && <p className="text-sm text-muted-foreground">{f.desc}</p>}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
-      {/* Shop by category */}
-      <section className="container-5xl py-16">
-        <Reveal className="mb-8 flex items-end justify-between">
-          <h2 className="font-display text-3xl font-extrabold uppercase tracking-tight">
-            Shop by category
-          </h2>
-          <Link href="/products" className="text-sm font-semibold text-foreground/70 hover:text-foreground hover:underline">
-            View all
-          </Link>
-        </Reveal>
-        <Reveal className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6" delay={0.05}>
-          {mockCategories.map((c) => (
+      {/* Shop by category — square tiles, dynamic from DB */}
+      {categories.length > 0 && (
+        <section className="container-5xl py-14 md:py-16">
+          <Reveal className="mb-8 flex items-end justify-between">
+            <h2 className="font-display text-3xl font-extrabold uppercase tracking-tight">
+              {home.categorySectionTitle}
+            </h2>
             <Link
-              key={c.slug}
-              href={`/products?category=${c.slug}`}
-              className="group rounded-xl border border-border bg-card p-5 text-center transition-colors hover:border-primary"
+              href="/products"
+              className="text-sm font-semibold text-foreground/70 hover:text-foreground hover:underline"
             >
-              <div className="text-4xl transition-transform group-hover:scale-110">
-                {c.emoji}
-              </div>
-              <p className="mt-3 font-display font-semibold uppercase leading-tight">
-                {c.name}
-              </p>
-              <p className="text-xs text-muted-foreground">{c.blurb}</p>
+              View all
             </Link>
-          ))}
-        </Reveal>
-      </section>
+          </Reveal>
+          <Reveal delay={0.05}>
+            <CategoryGrid categories={categories} />
+          </Reveal>
+        </section>
+      )}
 
       {/* Featured products */}
       {featured.length > 0 && (
-        <section className="container-5xl py-16">
+        <section className="container-5xl py-14 md:py-16">
           <Reveal className="mb-8 flex items-end justify-between">
             <h2 className="font-display text-3xl font-extrabold uppercase tracking-tight">
               Featured
@@ -89,7 +87,7 @@ export default async function HomePage() {
       {/* Bestsellers */}
       {bestsellers.length > 0 && (
         <section className="border-y border-border bg-muted/30">
-          <div className="container-5xl py-16">
+          <div className="container-5xl py-14 md:py-16">
             <Reveal className="mb-8 flex items-end justify-between">
               <h2 className="font-display text-3xl font-extrabold uppercase tracking-tight">
                 Bestsellers
@@ -107,38 +105,9 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Shop by goal */}
-      <section className="bg-muted/30">
-        <div className="container-5xl py-16">
-          <Reveal>
-            <h2 className="mb-8 font-display text-3xl font-extrabold uppercase tracking-tight">
-              Shop by goal
-            </h2>
-          </Reveal>
-          <Reveal className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" delay={0.05}>
-            {mockGoals.map((g) => (
-              <Link
-                key={g.slug}
-                href={`/products?goal=${g.slug}`}
-                className="group flex flex-col justify-between rounded-xl border border-border bg-card p-6 transition-colors hover:border-primary"
-              >
-                <div>
-                  <h3 className="font-display text-xl font-bold uppercase">{g.name}</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">{g.desc}</p>
-                </div>
-                <span className="mt-6 inline-flex items-center text-sm font-semibold text-foreground">
-                  Explore <ArrowRight className="ml-1 size-4 text-primary transition-transform group-hover:translate-x-1" />
-                </span>
-              </Link>
-            ))}
-          </Reveal>
-        </div>
-      </section>
-
       {/* CTA */}
       <section className="container-5xl py-20">
         <Reveal className="relative overflow-hidden rounded-2xl bg-primary px-8 py-16 text-center text-primary-foreground">
-          {/* Parallax decorative dumbbell glyphs */}
           <Parallax
             className="pointer-events-none absolute -right-6 -top-8 select-none opacity-15"
             distance={40}

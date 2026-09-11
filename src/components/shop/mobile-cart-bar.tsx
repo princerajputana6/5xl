@@ -27,7 +27,7 @@ export function MobileCartBar() {
     <div
       role="status"
       className="fixed inset-x-0 bottom-0 z-40 animate-in slide-in-from-bottom duration-300 lg:hidden"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 4rem)" }}
     >
       <div className="mx-3 mb-3 overflow-hidden rounded-2xl border border-border bg-card shadow-xl shadow-black/20">
         <div className="flex items-center gap-3 border-b border-border/70 px-4 py-3">

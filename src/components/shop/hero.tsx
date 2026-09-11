@@ -24,7 +24,28 @@ const ease = [0.22, 1, 0.36, 1] as const;
  * motion-animated copy. Dark by design for contrast; the rest of the page
  * stays on the light brand surface. Honors reduced motion throughout.
  */
-export function Hero({ products = [] }: { products?: ProductCardDTO[] }) {
+export type HeroContent = {
+  eyebrow?: string;
+  title?: string;
+  subtitle?: string;
+  ctaLabel?: string;
+  ctaHref?: string;
+};
+
+/** Splits a title so the final word gets the skewed primary highlight. */
+function splitTitle(title: string): { head: string; tail: string } {
+  const words = title.trim().split(/\s+/);
+  if (words.length <= 1) return { head: "", tail: title.trim() };
+  return { head: words.slice(0, -1).join(" "), tail: words[words.length - 1] };
+}
+
+export function Hero({
+  products = [],
+  content,
+}: {
+  products?: ProductCardDTO[];
+  content?: HeroContent;
+}) {
   const reduce = useReducedMotion();
   const sectionRef = React.useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({
@@ -116,34 +137,39 @@ export function Hero({ products = [] }: { products?: ProductCardDTO[] }) {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
               <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
             </span>
-            Premium Sports Nutrition
+            {content?.eyebrow || "Premium Sports Nutrition"}
           </motion.span>
 
           <motion.h1
             variants={item}
             className="font-display text-5xl font-extrabold uppercase leading-[0.92] tracking-tight sm:text-6xl lg:text-7xl"
           >
-            Fuel beyond{" "}
-            <span className="relative inline-block">
-              <span className="relative z-10 -skew-x-6 px-2 text-neutral-950">
-                limits
-              </span>
-              <motion.span
-                aria-hidden
-                initial={reduce ? { scaleX: 1 } : { scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ duration: 0.6, ease, delay: 0.6 }}
-                className="absolute inset-0 origin-left -skew-x-6 bg-primary"
-              />
-            </span>
+            {(() => {
+              const { head, tail } = splitTitle(content?.title || "Fuel beyond limits");
+              return (
+                <>
+                  {head && <>{head} </>}
+                  <span className="relative inline-block">
+                    <span className="relative z-10 -skew-x-6 px-2 text-neutral-950">{tail}</span>
+                    <motion.span
+                      aria-hidden
+                      initial={reduce ? { scaleX: 1 } : { scaleX: 0 }}
+                      animate={{ scaleX: 1 }}
+                      transition={{ duration: 0.6, ease, delay: 0.6 }}
+                      className="absolute inset-0 origin-left -skew-x-6 bg-primary"
+                    />
+                  </span>
+                </>
+              );
+            })()}
           </motion.h1>
 
           <motion.p
             variants={item}
             className="max-w-xl text-lg text-white/80 md:text-xl"
           >
-            Lab-tested whey, creatine and mass gainers engineered for serious
-            athletes. Authentic supplements, delivered fast across India.
+            {content?.subtitle ||
+              "Lab-tested whey, creatine and mass gainers engineered for serious athletes. Authentic supplements, delivered fast across India."}
           </motion.p>
 
           <motion.div variants={item} className="flex flex-wrap gap-3">
@@ -152,8 +178,8 @@ export function Hero({ products = [] }: { products?: ProductCardDTO[] }) {
               size="lg"
               className="group shadow-lg shadow-primary/20"
             >
-              <Link href="/products">
-                Shop all products
+              <Link href={content?.ctaHref || "/products"}>
+                {content?.ctaLabel || "Shop all products"}
                 <ArrowRight className="ml-1 size-4 transition-transform group-hover:translate-x-1" />
               </Link>
             </Button>
