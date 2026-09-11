@@ -282,3 +282,21 @@ html.cursor-visible .protein-cursor-root {
     transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) scale(0.3);
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Marquee (homepage benefits ticker)                                 */
+/* ------------------------------------------------------------------ */
+/* Content is rendered twice; translating the track by -50% loops it
+   seamlessly. GPU-composited transform only, and disabled for users
+   who prefer reduced motion. */
+@keyframes marquee-x {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee-x 32s linear infinite;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee { animation: none; }
+}
