@@ -9,6 +9,7 @@ export type CategoryRow = {
   name: string;
   slug: string;
   description: string | null;
+  tagline: string | null;
   image: string | null;
   emoji: string | null;
   parent: string | null;
@@ -21,6 +22,7 @@ export type CategoryRow = {
 export type PublicCategory = {
   name: string;
   slug: string;
+  tagline: string | null;
   image: string | null;
   emoji: string | null;
   productCount: number;
@@ -48,6 +50,7 @@ export async function listCategoriesAdmin(): Promise<CategoryRow[]> {
     name: c.name,
     slug: c.slug,
     description: c.description ?? null,
+    tagline: c.tagline ?? null,
     image: c.image ?? null,
     emoji: c.emoji ?? null,
     parent: c.parent ? String(c.parent) : null,
@@ -72,6 +75,7 @@ export async function listActiveCategories(slugs?: string[]): Promise<PublicCate
   const mapped = cats.map((c) => ({
     name: c.name,
     slug: c.slug,
+    tagline: c.tagline ?? null,
     image: c.image ?? null,
     emoji: c.emoji ?? null,
     productCount: counts.get(String(c._id)) ?? 0,
@@ -93,6 +97,7 @@ export async function getCategoryAdmin(id: string): Promise<AdminCategoryInput |
     name: c.name,
     slug: c.slug,
     description: c.description ?? "",
+    tagline: c.tagline ?? "",
     image: c.image ?? "",
     emoji: c.emoji ?? "",
     parent: c.parent ? String(c.parent) : null,

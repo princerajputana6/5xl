@@ -19,6 +19,7 @@ export const adminCategorySchema = z.object({
   name: z.string().trim().min(2, "Name is required"),
   slug,
   description: z.string().trim().optional(),
+  tagline: z.string().trim().max(40).optional(),
   image: z.string().trim().optional(),
   emoji: z.string().trim().max(8).optional(),
   parent: z.string().trim().nullish(),

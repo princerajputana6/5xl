@@ -5,6 +5,8 @@ const CategorySchema = new Schema(
     name: { type: String, required: true, trim: true },
     slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
     description: { type: String },
+    /** Short sub-label shown under the name on the homepage tiles (e.g. "Lean Muscles"). */
+    tagline: { type: String },
     image: { type: String },
     emoji: { type: String },
     parent: { type: Schema.Types.ObjectId, ref: "Category", default: null },

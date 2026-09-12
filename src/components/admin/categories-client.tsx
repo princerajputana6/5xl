@@ -41,6 +41,7 @@ type FormState = {
   emoji: string;
   image: string;
   parent: string; // "" = none
+  tagline: string;
   description: string;
   isActive: boolean;
 };
@@ -51,6 +52,7 @@ const EMPTY: FormState = {
   emoji: "",
   image: "",
   parent: "",
+  tagline: "",
   description: "",
   isActive: true,
 };
@@ -100,6 +102,7 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
       emoji: r.emoji ?? "",
       image: r.image ?? "",
       parent: r.parent ?? "",
+      tagline: r.tagline ?? "",
       description: r.description ?? "",
       isActive: r.isActive,
     });
@@ -116,6 +119,7 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
       emoji: form.emoji.trim() || undefined,
       image: form.image.trim() || undefined,
       parent: form.parent || null,
+      tagline: form.tagline.trim() || undefined,
       description: form.description.trim() || undefined,
       isActive: form.isActive,
     };
@@ -146,6 +150,7 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
         emoji: r.emoji ?? undefined,
         image: r.image ?? undefined,
         parent: r.parent,
+        tagline: r.tagline ?? undefined,
         description: r.description ?? undefined,
         isActive: !r.isActive,
       }),
@@ -384,6 +389,17 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="tagline">Tagline (sub-label on homepage tile)</Label>
+              <Input
+                id="tagline"
+                value={form.tagline}
+                onChange={(e) => set("tagline", e.target.value)}
+                placeholder="Lean Muscles"
+                maxLength={40}
+              />
             </div>
 
             <div className="space-y-1.5">

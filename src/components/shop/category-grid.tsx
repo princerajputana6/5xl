@@ -1,62 +1,70 @@
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { Gift } from "lucide-react";
 import type { PublicCategory } from "@/server/services/category.service";
 import { cn } from "@/lib/utils";
 
 /**
- * Square, image-first category tiles for the homepage (beastlife-style).
- * The name + product count always sit in a legible overlay; tiles without an
- * image fall back to the category emoji on a branded gradient.
+ * "What's your move?" category rail (RIPPED UP / RUN-inspired): a horizontal
+ * row of soft cream tiles with the category image floating inside, the name +
+ * tagline sitting below each tile, and a red "Build Your Bundle" promo card
+ * leading the row. Scrolls horizontally on overflow.
  */
 export function CategoryGrid({ categories }: { categories: PublicCategory[] }) {
   if (categories.length === 0) return null;
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
+    <div
+      className={cn(
+        "flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3",
+        "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      )}
+    >
+      {/* Build Your Bundle promo */}
+      <Link
+        href="/products"
+        className="group flex w-36 shrink-0 snap-start flex-col sm:w-40"
+      >
+        <div className="relative flex aspect-square w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-3xl bg-gradient-to-br from-red-600 to-red-800 p-4 text-center text-white shadow-lg shadow-red-900/25 transition-transform duration-300 group-hover:-translate-y-1">
+          <span className="absolute left-1/2 top-3 -translate-x-1/2 whitespace-nowrap rounded-full bg-primary px-2.5 py-0.5 text-[0.6rem] font-extrabold uppercase tracking-wide text-primary-foreground">
+            Save 10%
+          </span>
+          <Gift className="mt-4 size-9" strokeWidth={1.75} />
+          <div className="leading-tight">
+            <p className="text-xs font-medium">Build Your</p>
+            <p className="font-display text-xl font-extrabold uppercase">Bundle</p>
+          </div>
+        </div>
+        <p className="mt-3 text-center font-display text-sm font-bold uppercase tracking-tight">
+          Bundles
+        </p>
+        <p className="text-center text-xs text-muted-foreground">Save more</p>
+      </Link>
+
       {categories.map((c) => (
         <Link
           key={c.slug}
           href={`/products?category=${c.slug}`}
-          className={cn(
-            "group relative aspect-square overflow-hidden rounded-2xl border border-border bg-card",
-            "transition-all duration-300 hover:-translate-y-1 hover:border-primary hover:shadow-xl hover:shadow-primary/10"
-          )}
+          className="group flex w-36 shrink-0 snap-start flex-col sm:w-40"
         >
-          {c.image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={c.image}
-              alt={c.name}
-              loading="lazy"
-              className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-110"
-            />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/20 via-card to-card">
-              <span className="text-5xl transition-transform duration-300 group-hover:scale-110">
-                {c.emoji || "🏷️"}
-              </span>
-            </div>
-          )}
-
-          {/* legibility gradient */}
-          <span
-            aria-hidden
-            className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent"
-          />
-
-          {/* hover arrow chip */}
-          <span className="absolute right-2.5 top-2.5 grid size-7 translate-y-1 place-items-center rounded-full bg-primary text-primary-foreground opacity-0 shadow transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
-            <ArrowUpRight className="size-4" />
-          </span>
-
-          <div className="absolute inset-x-2.5 bottom-2.5">
-            <p className="line-clamp-2 font-display text-sm font-bold uppercase leading-tight tracking-tight text-white drop-shadow">
-              {c.name}
-            </p>
-            <p className="mt-0.5 text-[0.7rem] font-medium text-white/70">
-              {c.productCount} product{c.productCount === 1 ? "" : "s"}
-            </p>
+          <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-3xl bg-gradient-to-b from-[oklch(0.97_0.045_98)] to-[oklch(0.99_0.02_98)] p-4 shadow-sm ring-1 ring-black/5 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lg group-hover:shadow-primary/15">
+            {c.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={c.image}
+                alt={c.name}
+                loading="lazy"
+                className="size-full object-contain transition-transform duration-300 group-hover:scale-105"
+              />
+            ) : (
+              <span className="text-5xl">{c.emoji || "🏷️"}</span>
+            )}
           </div>
+          <p className="mt-3 text-center font-display text-sm font-bold uppercase leading-tight tracking-tight">
+            {c.name}
+          </p>
+          <p className="line-clamp-1 text-center text-xs text-muted-foreground">
+            {c.tagline || `${c.productCount} products`}
+          </p>
         </Link>
       ))}
     </div>

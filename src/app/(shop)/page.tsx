@@ -11,6 +11,9 @@ import { Reveal, Parallax } from "@/components/fx/scroll-fx";
 import { Button } from "@/components/ui/button";
 import { iconByName } from "@/lib/icon-map";
 
+/** Homepage rows never render more than two rows of four. */
+const MAX_ROW_ITEMS = 8;
+
 /** Section heading with the brand accent bar + optional "view all" link. */
 function SectionHeading({ title, href }: { title: string; href?: string }) {
   return (
@@ -24,7 +27,7 @@ function SectionHeading({ title, href }: { title: string; href?: string }) {
       {href && (
         <Link
           href={href}
-          className="group inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-foreground/70 transition-colors hover:text-foreground"
+          className="group hidden shrink-0 items-center gap-1 text-sm font-semibold text-foreground/70 transition-colors hover:text-foreground sm:inline-flex"
         >
           View all
           <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
@@ -34,15 +37,31 @@ function SectionHeading({ title, href }: { title: string; href?: string }) {
   );
 }
 
+/** Centered "shop all …" button that lands on the products/collection page. */
+function ShopAllButton({ href, label }: { href: string; label: string }) {
+  return (
+    <div className="mt-9 flex justify-center">
+      <Button asChild size="lg" variant="outline" className="group min-w-56">
+        <Link href={href}>
+          {label}
+          <ArrowRight className="ml-1 size-4 transition-transform group-hover:translate-x-1" />
+        </Link>
+      </Button>
+    </div>
+  );
+}
+
 export default async function HomePage() {
   const home = await getHomeContent();
 
-  const [featured, bestsellers, categories] = await Promise.all([
-    home.showFeatured ? getFeaturedProducts(8) : Promise.resolve([]),
-    home.showBestsellers ? getBestsellers(4) : Promise.resolve([]),
+  const [featuredAll, bestsellersAll, categories] = await Promise.all([
+    home.showFeatured ? getFeaturedProducts(MAX_ROW_ITEMS) : Promise.resolve([]),
+    home.showBestsellers ? getBestsellers(MAX_ROW_ITEMS) : Promise.resolve([]),
     listActiveCategories(home.featuredCategorySlugs),
   ]);
 
+  const featured = featuredAll.slice(0, MAX_ROW_ITEMS);
+  const bestsellers = bestsellersAll.slice(0, MAX_ROW_ITEMS);
   const heroContent = home.heroSlides[0];
 
   return (
@@ -53,36 +72,7 @@ export default async function HomePage() {
       {/* Scrolling benefits ticker */}
       <BenefitsMarquee />
 
-      {/* Feature strip — premium cards */}
-      {home.features.length > 0 && (
-        <section className="bg-background">
-          <div className="container-5xl grid grid-cols-2 gap-3 py-8 md:grid-cols-4 md:gap-4 md:py-10">
-            {home.features.map((f) => {
-              const Icon = iconByName(f.icon);
-              return (
-                <div
-                  key={f.title}
-                  className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md hover:shadow-primary/5"
-                >
-                  <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary">
-                    <Icon className="size-[22px]" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold leading-tight">{f.title}</p>
-                    {f.desc && (
-                      <p className="mt-1 line-clamp-2 text-xs leading-snug text-muted-foreground">
-                        {f.desc}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* Shop by category — square tiles, dynamic from DB */}
+      {/* Shop by category — RUN-inspired rail, dynamic from DB */}
       {categories.length > 0 && (
         <section className="container-5xl py-12 md:py-16">
           <Reveal>
@@ -94,7 +84,7 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Featured products */}
+      {/* Featured products — up to two rows */}
       {featured.length > 0 && (
         <section className="border-y border-border bg-muted/30">
           <div className="container-5xl py-12 md:py-16">
@@ -106,11 +96,12 @@ export default async function HomePage() {
                 <ProductCard key={p.id} product={p} />
               ))}
             </Reveal>
+            <ShopAllButton href="/products" label="Shop all products" />
           </div>
         </section>
       )}
 
-      {/* Bestsellers */}
+      {/* Bestsellers — up to two rows */}
       {bestsellers.length > 0 && (
         <section className="container-5xl py-12 md:py-16">
           <Reveal>
@@ -121,13 +112,13 @@ export default async function HomePage() {
               <ProductCard key={p.id} product={p} />
             ))}
           </Reveal>
+          <ShopAllButton href="/products?sort=rating" label="Shop all best sellers" />
         </section>
       )}
 
       {/* CTA */}
-      <section className="container-5xl pb-20 pt-4 md:pt-8">
+      <section className="container-5xl pb-16 pt-4 md:pt-8">
         <Reveal className="relative overflow-hidden rounded-3xl bg-neutral-950 px-6 py-16 text-center text-white md:px-8 md:py-20">
-          {/* volt glow */}
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0"
@@ -136,16 +127,10 @@ export default async function HomePage() {
                 "radial-gradient(60% 80% at 50% 0%, oklch(0.86 0.18 96 / 0.22), transparent 65%)",
             }}
           />
-          <Parallax
-            className="pointer-events-none absolute -right-6 -top-8 select-none opacity-10"
-            distance={40}
-          >
+          <Parallax className="pointer-events-none absolute -right-6 -top-8 select-none opacity-10" distance={40}>
             <span className="text-[9rem] leading-none">🏋️</span>
           </Parallax>
-          <Parallax
-            className="pointer-events-none absolute -bottom-10 -left-4 select-none opacity-10"
-            distance={-30}
-          >
+          <Parallax className="pointer-events-none absolute -bottom-10 -left-4 select-none opacity-10" distance={-30}>
             <span className="text-[7rem] leading-none">💪</span>
           </Parallax>
           <span className="relative inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
@@ -173,6 +158,35 @@ export default async function HomePage() {
           </div>
         </Reveal>
       </section>
+
+      {/* Trust badges — moved to the bottom */}
+      {home.features.length > 0 && (
+        <section className="border-t border-border bg-background">
+          <div className="container-5xl grid grid-cols-2 gap-3 py-10 md:grid-cols-4 md:gap-4 md:py-12">
+            {home.features.map((f) => {
+              const Icon = iconByName(f.icon);
+              return (
+                <div
+                  key={f.title}
+                  className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md hover:shadow-primary/5"
+                >
+                  <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary">
+                    <Icon className="size-[22px]" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold leading-tight">{f.title}</p>
+                    {f.desc && (
+                      <p className="mt-1 line-clamp-2 text-xs leading-snug text-muted-foreground">
+                        {f.desc}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
     </>
   );
 }
