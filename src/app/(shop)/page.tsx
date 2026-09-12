@@ -11,8 +11,10 @@ import { Reveal, Parallax } from "@/components/fx/scroll-fx";
 import { Button } from "@/components/ui/button";
 import { iconByName } from "@/lib/icon-map";
 
-/** Homepage rows never render more than two rows of four. */
-const MAX_ROW_ITEMS = 8;
+/** Homepage product rows render a single row of four (two rows on mobile). */
+const MAX_ROW_ITEMS = 4;
+/** Enough featured items to also fill the hero card fan. */
+const HERO_ITEMS = 5;
 
 /** Section heading with the brand accent bar + optional "view all" link. */
 function SectionHeading({ title, href }: { title: string; href?: string }) {
@@ -55,7 +57,7 @@ export default async function HomePage() {
   const home = await getHomeContent();
 
   const [featuredAll, bestsellersAll, categories] = await Promise.all([
-    home.showFeatured ? getFeaturedProducts(MAX_ROW_ITEMS) : Promise.resolve([]),
+    home.showFeatured ? getFeaturedProducts(Math.max(MAX_ROW_ITEMS, HERO_ITEMS)) : Promise.resolve([]),
     home.showBestsellers ? getBestsellers(MAX_ROW_ITEMS) : Promise.resolve([]),
     listActiveCategories(home.featuredCategorySlugs),
   ]);
@@ -67,7 +69,7 @@ export default async function HomePage() {
   return (
     <>
       {/* Hero */}
-      <Hero products={featured.slice(0, 5)} content={heroContent} />
+      <Hero products={featuredAll.slice(0, HERO_ITEMS)} content={heroContent} />
 
       {/* Scrolling benefits ticker */}
       <BenefitsMarquee />
@@ -84,14 +86,14 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Featured products — up to two rows */}
+      {/* Featured products — one row of four */}
       {featured.length > 0 && (
         <section className="border-y border-border bg-muted/30">
           <div className="container-5xl py-12 md:py-16">
             <Reveal>
               <SectionHeading title="Featured" href="/products" />
             </Reveal>
-            <Reveal className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4" delay={0.05}>
+            <Reveal className="grid grid-cols-2 gap-4 lg:grid-cols-4" delay={0.05}>
               {featured.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}
@@ -101,13 +103,13 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Bestsellers — up to two rows */}
+      {/* Bestsellers — one row of four */}
       {bestsellers.length > 0 && (
         <section className="container-5xl py-12 md:py-16">
           <Reveal>
             <SectionHeading title="Bestsellers" href="/products?sort=rating" />
           </Reveal>
-          <Reveal className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4" delay={0.05}>
+          <Reveal className="grid grid-cols-2 gap-4 lg:grid-cols-4" delay={0.05}>
             {bestsellers.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
