@@ -104,16 +104,24 @@ export function ReviewsSection({
 
   const [sort, setSort] = React.useState<SortKey>("recent");
   const [starFilter, setStarFilter] = React.useState<number | null>(null);
+  const [verifiedOnly, setVerifiedOnly] = React.useState(false);
 
   const overall = summary.count > 0 ? summary.average : fallbackRating;
+  const verifiedCount = React.useMemo(
+    () => reviews.filter((r) => r.isVerifiedPurchase).length,
+    [reviews]
+  );
 
   const visible = React.useMemo(() => {
-    const list = starFilter ? reviews.filter((r) => Math.round(r.rating) === starFilter) : [...reviews];
+    let list = starFilter
+      ? reviews.filter((r) => Math.round(r.rating) === starFilter)
+      : [...reviews];
+    if (verifiedOnly) list = list.filter((r) => r.isVerifiedPurchase);
     if (sort === "highest") list.sort((a, b) => b.rating - a.rating);
     else if (sort === "lowest") list.sort((a, b) => a.rating - b.rating);
     else list.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
     return list;
-  }, [reviews, sort, starFilter]);
+  }, [reviews, sort, starFilter, verifiedOnly]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -308,7 +316,22 @@ export function ReviewsSection({
               )}
             </p>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {verifiedCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setVerifiedOnly((v) => !v)}
+                  aria-pressed={verifiedOnly}
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
+                    verifiedOnly
+                      ? "border-emerald-500/50 bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300"
+                      : "border-border text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <BadgeCheck className="size-3.5" /> Verified only
+                </button>
+              )}
               <Filter className="size-3.5 text-muted-foreground" />
               <div className="flex rounded-md border border-border p-0.5">
                 {SORTS.map((s) => (
