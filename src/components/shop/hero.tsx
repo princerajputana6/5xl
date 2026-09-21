@@ -189,7 +189,7 @@ export function Hero({
               variant="outline"
               className="border-white/25 bg-white/5 text-white backdrop-blur-sm hover:bg-white/15 hover:text-white"
             >
-              <Link href="/subscriptions">Start a subscription</Link>
+              <Link href="/products?sort=rating">Shop bestsellers</Link>
             </Button>
           </motion.div>
 

@@ -17,6 +17,8 @@ import {
 } from "@/server/services/review.service";
 import { ProductGallery } from "@/components/shop/product-gallery";
 import { ProductPurchasePanel } from "@/components/shop/product-purchase-panel";
+import { ProductBuyProvider } from "@/components/shop/product-buy-context";
+import { ProductStickyBar } from "@/components/shop/product-sticky-bar";
 import { ProductCard } from "@/components/shop/product-card";
 import { Rating } from "@/components/shop/rating";
 import { ReviewsSection } from "@/components/shop/reviews-section";
@@ -93,6 +95,7 @@ export default async function ProductDetailPage({
       </nav>
 
       {/* Main */}
+      <ProductBuyProvider product={product}>
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
         <ProductGallery
           images={product.images}
@@ -145,10 +148,13 @@ export default async function ProductDetailPage({
           />
 
           <ProductPurchasePanel product={product} />
+          <div id="buy-anchor" aria-hidden className="h-px" />
 
           <PincodeChecker />
         </div>
       </div>
+      <ProductStickyBar product={product} />
+      </ProductBuyProvider>
 
       <KeyBenefits benefits={getKeyBenefits(product.categorySlug)} />
 

@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { Wallet } from "lucide-react";
 import type { ProductDetailDTO } from "@/types/catalog";
 import { cn } from "@/lib/utils";
@@ -9,18 +8,14 @@ import { QuantitySelector } from "./quantity-selector";
 import { AddToCartButton } from "./add-to-cart-button";
 import { BuyNowButton } from "./buy-now-button";
 import { ShareButton } from "./share-button";
+import { useProductBuy } from "./product-buy-context";
 
 const CASHBACK_PCT = 0.01;
 
 export function ProductPurchasePanel({ product }: { product: ProductDetailDTO }) {
+  const { variantIdx, setVariantIdx, qty, setQty, variant, price, inStock } =
+    useProductBuy();
   const hasVariants = product.variants.length > 1;
-  const [variantIdx, setVariantIdx] = React.useState(0);
-  const [qty, setQty] = React.useState(1);
-
-  const variant = product.variants.length > 0 ? product.variants[variantIdx] : null;
-  const stock = variant ? variant.stock : product.inStock ? 1 : 0;
-  const inStock = stock > 0;
-  const price = variant?.price ?? product.price;
   const cashback = Math.round(price * qty * CASHBACK_PCT);
 
   const cartProduct = {

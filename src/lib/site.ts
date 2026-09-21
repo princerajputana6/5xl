@@ -4,8 +4,10 @@ export const siteConfig = {
   description:
     "Premium sports nutrition, engineered for serious athletes. Lab-tested whey, creatine, mass gainers and more — authentic, fast-shipped across India.",
   url: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
-  supportEmail: "support@5xl.in",
-  supportPhone: "+91 90000 00000",
+  supportEmail: "5xlnutrition@gmail.com",
+  supportPhone: "+91 92895 37733",
+  /** Google Tag Manager container id (overridable via env). */
+  gtmId: process.env.NEXT_PUBLIC_GTM_ID ?? "GTM-MVPTZ5VQ",
   social: {
     instagram: "https://instagram.com/5xl",
     youtube: "https://youtube.com/@5xl",
@@ -42,7 +44,7 @@ export const footerNav = {
     { label: "All Products", href: "/products" },
     { label: "Brands", href: "/brands" },
     { label: "Offers", href: "/offers" },
-    { label: "Subscriptions", href: "/subscriptions" },
+    { label: "Blog", href: "/blog" },
   ],
   support: [
     { label: "Track Order", href: "/track-order" },

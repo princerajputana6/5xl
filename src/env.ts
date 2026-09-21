@@ -20,6 +20,9 @@ const schema = z.object({
 
   NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
 
+  // Google Tag Manager container id (optional; falls back to the site default)
+  NEXT_PUBLIC_GTM_ID: z.string().optional(),
+
   // Deferred integrations (optional until their milestone)
   // Razorpay (M3): when key id/secret are absent the payment gateway runs in
   // a self-contained STUB mode so checkout works end-to-end without real keys.
