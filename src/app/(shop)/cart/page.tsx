@@ -15,13 +15,13 @@ import { useCart } from "@/components/providers/cart-provider";
 import { QuantitySelector } from "@/components/shop/quantity-selector";
 import { ProductImage } from "@/components/shop/product-image";
 import { EmptyState } from "@/components/shared/empty-state";
+import { CartRewardBar } from "@/components/shop/cart-reward-bar";
 import { Button } from "@/components/ui/button";
 import { formatINR, discountPct } from "@/lib/format";
 import {
   shippingFor,
   computeAmounts,
   pointsEarnedFor,
-  FREE_SHIPPING_THRESHOLD,
 } from "@/lib/cart-pricing";
 import { cn } from "@/lib/utils";
 
@@ -55,8 +55,6 @@ export default function CartPage() {
   const savings = Math.max(0, mrpTotal - subtotal);
   const amounts = computeAmounts(subtotal);
   const shipping = shippingFor(subtotal);
-  const awayFromFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal);
-  const freeShippingPct = Math.min(100, (subtotal / FREE_SHIPPING_THRESHOLD) * 100);
   const points = pointsEarnedFor(amounts.total);
 
   return (
@@ -76,35 +74,8 @@ export default function CartPage() {
         </Link>
       </div>
 
-      {/* Free-shipping progress */}
-      <div className="mb-6 overflow-hidden rounded-xl border border-border bg-card">
-        <div className="flex items-center gap-3 px-5 py-3.5">
-          <Truck
-            className={cn("size-5 shrink-0", shipping === 0 ? "text-success" : "text-primary")}
-          />
-          <p className="text-sm">
-            {shipping === 0 ? (
-              <>
-                <strong className="text-success">Free shipping unlocked</strong> — nice one.
-              </>
-            ) : (
-              <>
-                Add <strong>{formatINR(awayFromFreeShipping)}</strong> more to unlock{" "}
-                <strong>free shipping</strong>.
-              </>
-            )}
-          </p>
-        </div>
-        <div className="h-1.5 bg-muted">
-          <div
-            className={cn(
-              "h-full transition-[width] duration-700 ease-out",
-              shipping === 0 ? "bg-success" : "bg-primary"
-            )}
-            style={{ width: `${freeShippingPct}%` }}
-          />
-        </div>
-      </div>
+      {/* Tiered reward / offer bar */}
+      <CartRewardBar subtotal={subtotal} className="mb-6" />
 
       <div className="grid gap-8 lg:grid-cols-[1fr_360px] [&>*]:min-w-0">
         {/* ---- Items ---- */}

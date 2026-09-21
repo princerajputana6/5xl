@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { X, ShoppingBag, ArrowRight } from "lucide-react";
 import { useCart } from "@/components/providers/cart-provider";
 import { ProductImage } from "@/components/shop/product-image";
+import { CartRewardBar } from "@/components/shop/cart-reward-bar";
 import { formatINR } from "@/lib/format";
 
 /**
@@ -58,6 +59,8 @@ export function MobileCartBar() {
             <X className="size-4" />
           </button>
         </div>
+
+        <CartRewardBar subtotal={subtotal} className="m-3 rounded-lg border-none bg-transparent" />
 
         <Link
           href="/checkout"
