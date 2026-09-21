@@ -2,6 +2,33 @@ import { connectDB } from "@/server/db";
 import { HomeContent } from "@/server/models/HomeContent";
 import type { HomeContentInput } from "@/lib/validators/cms";
 
+export type HomeSectionDTO = {
+  id: string;
+  type: "products" | "categories" | "video" | "testimonials" | "banner" | "richtext";
+  title: string;
+  description: string;
+  enabled: boolean;
+  productSource: "featured" | "bestsellers" | "manual" | "category";
+  productSlugs: string[];
+  categorySlug: string;
+  limit: number;
+  layout: "grid" | "carousel";
+  viewAllHref: string;
+  categorySlugs: string[];
+  videos: { url: string; poster: string; caption: string; productSlug: string }[];
+  testimonials: {
+    author: string;
+    role: string;
+    rating: number;
+    body: string;
+    avatar: string;
+  }[];
+  image: string;
+  ctaLabel: string;
+  ctaHref: string;
+  html: string;
+};
+
 export type HomeContentDTO = {
   announcement: string;
   heroSlides: {
@@ -17,7 +44,42 @@ export type HomeContentDTO = {
   showFeatured: boolean;
   showBestsellers: boolean;
   featuredCategorySlugs: string[];
+  sections: HomeSectionDTO[];
 };
+
+function toSectionDTO(s: Record<string, unknown>): HomeSectionDTO {
+  return {
+    id: String(s.id ?? ""),
+    type: (s.type as HomeSectionDTO["type"]) ?? "products",
+    title: (s.title as string) ?? "",
+    description: (s.description as string) ?? "",
+    enabled: s.enabled !== false,
+    productSource: (s.productSource as HomeSectionDTO["productSource"]) ?? "manual",
+    productSlugs: (s.productSlugs as string[]) ?? [],
+    categorySlug: (s.categorySlug as string) ?? "",
+    limit: typeof s.limit === "number" ? (s.limit as number) : 8,
+    layout: (s.layout as HomeSectionDTO["layout"]) ?? "grid",
+    viewAllHref: (s.viewAllHref as string) ?? "",
+    categorySlugs: (s.categorySlugs as string[]) ?? [],
+    videos: ((s.videos as Record<string, unknown>[]) ?? []).map((v) => ({
+      url: (v.url as string) ?? "",
+      poster: (v.poster as string) ?? "",
+      caption: (v.caption as string) ?? "",
+      productSlug: (v.productSlug as string) ?? "",
+    })),
+    testimonials: ((s.testimonials as Record<string, unknown>[]) ?? []).map((t) => ({
+      author: (t.author as string) ?? "",
+      role: (t.role as string) ?? "",
+      rating: typeof t.rating === "number" ? (t.rating as number) : 5,
+      body: (t.body as string) ?? "",
+      avatar: (t.avatar as string) ?? "",
+    })),
+    image: (s.image as string) ?? "",
+    ctaLabel: (s.ctaLabel as string) ?? "",
+    ctaHref: (s.ctaHref as string) ?? "",
+    html: (s.html as string) ?? "",
+  };
+}
 
 /** Shipped defaults so a fresh install still renders a complete homepage. */
 export const HOME_DEFAULTS: HomeContentDTO = {
@@ -43,6 +105,7 @@ export const HOME_DEFAULTS: HomeContentDTO = {
   showFeatured: true,
   showBestsellers: true,
   featuredCategorySlugs: [],
+  sections: [],
 };
 
 function toDTO(doc: Record<string, unknown> | null): HomeContentDTO {
@@ -68,6 +131,7 @@ function toDTO(doc: Record<string, unknown> | null): HomeContentDTO {
     showFeatured: doc.showFeatured !== false,
     showBestsellers: doc.showBestsellers !== false,
     featuredCategorySlugs: (doc.featuredCategorySlugs as string[]) ?? [],
+    sections: ((doc.sections as Record<string, unknown>[]) ?? []).map(toSectionDTO),
   };
 }
 

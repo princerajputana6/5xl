@@ -10,9 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ImageUploader } from "@/components/admin/image-uploader";
+import { HomeSectionsEditor } from "@/components/admin/home-sections-editor";
 
 type Slide = HomeContentDTO["heroSlides"][number];
 type Feature = HomeContentDTO["features"][number];
+type HomeSection = HomeContentDTO["sections"][number];
 
 const EMPTY_SLIDE: Slide = { eyebrow: "", title: "", subtitle: "", ctaLabel: "", ctaHref: "", image: "" };
 const EMPTY_FEATURE: Feature = { icon: "", title: "", desc: "" };
@@ -32,9 +34,11 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
 export function HomepageClient({
   content,
   categories,
+  products,
 }: {
   content: HomeContentDTO;
   categories: { slug: string; name: string }[];
+  products: { slug: string; name: string }[];
 }) {
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
@@ -45,6 +49,7 @@ export function HomepageClient({
   const [slides, setSlides] = React.useState<Slide[]>(content.heroSlides);
   const [features, setFeatures] = React.useState<Feature[]>(content.features);
   const [featuredSlugs, setFeaturedSlugs] = React.useState<string[]>(content.featuredCategorySlugs);
+  const [sections, setSections] = React.useState<HomeSection[]>(content.sections);
 
   function updateSlide(i: number, patch: Partial<Slide>) {
     setSlides((s) => s.map((sl, idx) => (idx === i ? { ...sl, ...patch } : sl)));
@@ -89,6 +94,17 @@ export function HomepageClient({
       features: features
         .filter((f) => f.title.trim())
         .map((f) => ({ icon: f.icon || undefined, title: f.title, desc: f.desc || undefined })),
+      sections: sections.map((s) => ({
+        ...s,
+        title: s.title || undefined,
+        description: s.description || undefined,
+        viewAllHref: s.viewAllHref || undefined,
+        categorySlug: s.categorySlug || undefined,
+        image: s.image || undefined,
+        ctaLabel: s.ctaLabel || undefined,
+        ctaHref: s.ctaHref || undefined,
+        html: s.html || undefined,
+      })),
     };
     const res = await fetch("/api/admin/home", {
       method: "PUT",
@@ -120,6 +136,18 @@ export function HomepageClient({
 
       <Section title="Announcement bar" hint="The thin ribbon across the very top of every page.">
         <Input value={announcement} onChange={(e) => setAnnouncement(e.target.value)} />
+      </Section>
+
+      <Section
+        title="Homepage sections"
+        hint="Drag to reorder. Add as many sections as you like — products, categories, a video slider, testimonials, banners or rich text. When any section here is live, it replaces the default Category / Featured / Bestseller rows below."
+      >
+        <HomeSectionsEditor
+          value={sections}
+          onChange={setSections}
+          categories={categories}
+          products={products}
+        />
       </Section>
 
       <Section title="Hero slides" hint="The big banner at the top of the homepage.">

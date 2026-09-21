@@ -26,6 +26,73 @@ const FeatureItemSchema = new Schema(
   { _id: false }
 );
 
+/* ---- Flexible, admin-orderable homepage sections ---- */
+
+const VideoItemSchema = new Schema(
+  {
+    url: String, // mp4/webm URL or YouTube/Vimeo link
+    poster: String, // thumbnail image
+    caption: String,
+    productSlug: String, // product assigned to this video
+  },
+  { _id: false }
+);
+
+const TestimonialItemSchema = new Schema(
+  {
+    author: { type: String, required: true },
+    role: String,
+    rating: { type: Number, default: 5 },
+    body: { type: String, required: true },
+    avatar: String,
+  },
+  { _id: false }
+);
+
+const HomeSectionSchema = new Schema(
+  {
+    id: { type: String, required: true },
+    type: {
+      type: String,
+      enum: ["products", "categories", "video", "testimonials", "banner", "richtext"],
+      required: true,
+    },
+    title: String,
+    description: String,
+    enabled: { type: Boolean, default: true },
+
+    // products
+    productSource: {
+      type: String,
+      enum: ["featured", "bestsellers", "manual", "category"],
+      default: "manual",
+    },
+    productSlugs: { type: [String], default: [] },
+    categorySlug: String, // products-from-category source
+    limit: { type: Number, default: 8 },
+    layout: { type: String, enum: ["grid", "carousel"], default: "grid" },
+    viewAllHref: String,
+
+    // categories
+    categorySlugs: { type: [String], default: [] },
+
+    // video slider
+    videos: { type: [VideoItemSchema], default: [] },
+
+    // testimonials
+    testimonials: { type: [TestimonialItemSchema], default: [] },
+
+    // banner
+    image: String,
+    ctaLabel: String,
+    ctaHref: String,
+
+    // richtext
+    html: String,
+  },
+  { _id: false }
+);
+
 const HomeContentSchema = new Schema(
   {
     key: { type: String, required: true, unique: true, default: "home" },
@@ -36,6 +103,9 @@ const HomeContentSchema = new Schema(
     showFeatured: { type: Boolean, default: true },
     showBestsellers: { type: Boolean, default: true },
     featuredCategorySlugs: { type: [String], default: [] },
+    /** Ordered, admin-managed dynamic sections. When non-empty these drive the
+     *  homepage body in place of the legacy fixed rows. */
+    sections: { type: [HomeSectionSchema], default: [] },
   },
   { timestamps: true }
 );

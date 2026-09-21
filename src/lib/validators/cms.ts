@@ -65,6 +65,51 @@ export const featureItemSchema = z.object({
   desc: z.string().trim().optional(),
 });
 
+/* ---- Dynamic homepage sections ---- */
+
+export const videoItemSchema = z.object({
+  url: z.string().trim().optional(),
+  poster: z.string().trim().optional(),
+  caption: z.string().trim().optional(),
+  productSlug: z.string().trim().optional(),
+});
+
+export const testimonialItemSchema = z.object({
+  author: z.string().trim().min(1, "Author is required"),
+  role: z.string().trim().optional(),
+  rating: z.number().min(1).max(5).optional(),
+  body: z.string().trim().min(1, "Review text is required"),
+  avatar: z.string().trim().optional(),
+});
+
+export const homeSectionSchema = z.object({
+  id: z.string().min(1),
+  type: z.enum(["products", "categories", "video", "testimonials", "banner", "richtext"]),
+  title: z.string().trim().optional(),
+  description: z.string().trim().optional(),
+  enabled: z.boolean().optional(),
+
+  productSource: z.enum(["featured", "bestsellers", "manual", "category"]).optional(),
+  productSlugs: z.array(z.string()).optional(),
+  categorySlug: z.string().trim().optional(),
+  limit: z.number().int().min(1).max(24).optional(),
+  layout: z.enum(["grid", "carousel"]).optional(),
+  viewAllHref: z.string().trim().optional(),
+
+  categorySlugs: z.array(z.string()).optional(),
+
+  videos: z.array(videoItemSchema).max(20).optional(),
+  testimonials: z.array(testimonialItemSchema).max(30).optional(),
+
+  image: z.string().trim().optional(),
+  ctaLabel: z.string().trim().optional(),
+  ctaHref: z.string().trim().optional(),
+
+  html: z.string().optional(),
+});
+
+export type HomeSectionInput = z.infer<typeof homeSectionSchema>;
+
 export const homeContentSchema = z.object({
   announcement: z.string().trim().optional(),
   heroSlides: z.array(heroSlideSchema).max(6).optional(),
@@ -73,6 +118,7 @@ export const homeContentSchema = z.object({
   showFeatured: z.boolean().optional(),
   showBestsellers: z.boolean().optional(),
   featuredCategorySlugs: z.array(z.string()).optional(),
+  sections: z.array(homeSectionSchema).max(40).optional(),
 });
 
 export type HomeContentInput = z.infer<typeof homeContentSchema>;

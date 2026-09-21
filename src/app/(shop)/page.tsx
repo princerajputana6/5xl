@@ -6,6 +6,7 @@ import { getHomeContent } from "@/server/services/home.service";
 import { ProductCard } from "@/components/shop/product-card";
 import { Hero } from "@/components/shop/hero";
 import { CategoryGrid } from "@/components/shop/category-grid";
+import { HomeSections } from "@/components/shop/home-sections";
 import { BenefitsMarquee } from "@/components/shop/benefits-marquee";
 import { Reveal, Parallax } from "@/components/fx/scroll-fx";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,7 @@ export default async function HomePage() {
   const featured = featuredAll.slice(0, MAX_ROW_ITEMS);
   const bestsellers = bestsellersAll.slice(0, MAX_ROW_ITEMS);
   const heroContent = home.heroSlides[0];
+  const hasCustomSections = home.sections.some((s) => s.enabled);
 
   return (
     <>
@@ -74,52 +76,59 @@ export default async function HomePage() {
       {/* Scrolling benefits ticker */}
       <BenefitsMarquee />
 
-      {/* Shop by category — RUN-inspired rail, dynamic from DB */}
-      {categories.length > 0 && (
-        <section className="container-5xl py-12 md:py-16">
-          <Reveal>
-            <SectionHeading title={home.categorySectionTitle} href="/products" />
-          </Reveal>
-          <Reveal delay={0.05}>
-            <CategoryGrid categories={categories} />
-          </Reveal>
-        </section>
-      )}
+      {hasCustomSections ? (
+        /* Fully dynamic, admin-ordered sections */
+        <HomeSections sections={home.sections} />
+      ) : (
+        <>
+          {/* Shop by category — RUN-inspired rail, dynamic from DB */}
+          {categories.length > 0 && (
+            <section className="container-5xl py-8 md:py-12">
+              <Reveal>
+                <SectionHeading title={home.categorySectionTitle} href="/products" />
+              </Reveal>
+              <Reveal delay={0.05}>
+                <CategoryGrid categories={categories} />
+              </Reveal>
+            </section>
+          )}
 
-      {/* Featured products — one row of four */}
-      {featured.length > 0 && (
-        <section className="border-y border-border bg-muted/30">
-          <div className="container-5xl py-12 md:py-16">
-            <Reveal>
-              <SectionHeading title="Featured" href="/products" />
-            </Reveal>
-            <Reveal className="grid grid-cols-2 gap-4 lg:grid-cols-4" delay={0.05}>
-              {featured.map((p) => (
-                <ProductCard key={p.id} product={p} />
-              ))}
-            </Reveal>
-            <ShopAllButton href="/products" label="Shop all products" />
-          </div>
-        </section>
-      )}
+          {/* Featured products — one row of four */}
+          {featured.length > 0 && (
+            <section className="border-y border-border bg-muted/30">
+              <div className="container-5xl py-8 md:py-12">
+                <Reveal>
+                  <SectionHeading title="Featured" href="/products" />
+                </Reveal>
+                <Reveal className="grid grid-cols-2 gap-4 lg:grid-cols-4" delay={0.05}>
+                  {featured.map((p) => (
+                    <ProductCard key={p.id} product={p} />
+                  ))}
+                </Reveal>
+                <ShopAllButton href="/products" label="Shop all products" />
+              </div>
+            </section>
+          )}
 
-      {/* Bestsellers — one row of four */}
-      {bestsellers.length > 0 && (
-        <section className="container-5xl py-12 md:py-16">
-          <Reveal>
-            <SectionHeading title="Bestsellers" href="/products?sort=rating" />
-          </Reveal>
-          <Reveal className="grid grid-cols-2 gap-4 lg:grid-cols-4" delay={0.05}>
-            {bestsellers.map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </Reveal>
-          <ShopAllButton href="/products?sort=rating" label="Shop all best sellers" />
-        </section>
+          {/* Bestsellers — one row of four */}
+          {bestsellers.length > 0 && (
+            <section className="container-5xl py-8 md:py-12">
+              <Reveal>
+                <SectionHeading title="Bestsellers" href="/products?sort=rating" />
+              </Reveal>
+              <Reveal className="grid grid-cols-2 gap-4 lg:grid-cols-4" delay={0.05}>
+                {bestsellers.map((p) => (
+                  <ProductCard key={p.id} product={p} />
+                ))}
+              </Reveal>
+              <ShopAllButton href="/products?sort=rating" label="Shop all best sellers" />
+            </section>
+          )}
+        </>
       )}
 
       {/* CTA */}
-      <section className="container-5xl pb-16 pt-4 md:pt-8">
+      <section className="container-5xl pb-14 pt-4 md:pt-6">
         <Reveal className="relative overflow-hidden rounded-3xl bg-neutral-950 px-6 py-16 text-center text-white md:px-8 md:py-20">
           <div
             aria-hidden

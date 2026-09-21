@@ -197,6 +197,49 @@ async function findByFlag(flag: "isFeatured" | "isBestseller", limit: number) {
 export const getFeaturedProducts = (limit = 8) => findByFlag("isFeatured", limit);
 export const getBestsellers = (limit = 8) => findByFlag("isBestseller", limit);
 
+/** Products for the given slugs, preserving the requested order (CMS picker). */
+export async function getProductsBySlugs(slugs: string[]): Promise<ProductCardDTO[]> {
+  const wanted = slugs.filter(Boolean);
+  if (wanted.length === 0) return [];
+  await connectDB();
+  const docs = await Product.find({ slug: { $in: wanted }, status: "active" })
+    .populate("brand", "name slug")
+    .populate("category", "name slug")
+    .lean();
+  const bySlug = new Map(docs.map((d) => [String(d.slug), toCardDTO(d)]));
+  return wanted
+    .map((s) => bySlug.get(s))
+    .filter((p): p is ProductCardDTO => Boolean(p));
+}
+
+/** Active products within a category (by slug), newest first. */
+export async function getProductsByCategorySlug(
+  slug: string,
+  limit = 8
+): Promise<ProductCardDTO[]> {
+  if (!slug) return [];
+  await connectDB();
+  const cat = await Category.findOne({ slug }).select("_id").lean();
+  if (!cat) return [];
+  const docs = await Product.find({ category: cat._id, status: "active" })
+    .populate("brand", "name slug")
+    .populate("category", "name slug")
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .lean();
+  return docs.map(toCardDTO);
+}
+
+/** Lightweight product list for admin pickers: `{ slug, name }`. */
+export async function listProductsForPicker(): Promise<{ slug: string; name: string }[]> {
+  await connectDB();
+  const docs = await Product.find({ status: "active" })
+    .select("slug name")
+    .sort({ name: 1 })
+    .lean();
+  return docs.map((d) => ({ slug: String(d.slug), name: String(d.name) }));
+}
+
 export type ProductOption = {
   label: string;
   slug: string;
