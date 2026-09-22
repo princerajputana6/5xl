@@ -13,6 +13,7 @@ import {
   Quote,
   Image as ImageIcon,
   FileText,
+  GalleryHorizontal,
 } from "lucide-react";
 import type { HomeSectionDTO } from "@/server/services/home.service";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ const TYPE_META: Record<
   { label: string; icon: React.ComponentType<{ className?: string }> }
 > = {
   products: { label: "Products", icon: Package },
+  cards: { label: "Card slider", icon: GalleryHorizontal },
   categories: { label: "Categories", icon: LayoutGrid },
   video: { label: "Video slider", icon: Video },
   testimonials: { label: "Testimonials", icon: Quote },
@@ -59,6 +61,7 @@ export function emptySection(type: Section["type"]): Section {
     layout: "grid",
     viewAllHref: "",
     categorySlugs: [],
+    cards: [],
     videos: [],
     testimonials: [],
     image: "",
@@ -371,6 +374,14 @@ export function HomeSectionsEditor({
                 </div>
               )}
 
+              {s.type === "cards" && (
+                <CardEditor
+                  cards={s.cards}
+                  products={products}
+                  onChange={(cards) => update(i, { cards })}
+                />
+              )}
+
               {s.type === "categories" && (
                 <div className="space-y-1.5 rounded-lg bg-muted/40 p-3">
                   <Label>Categories (leave empty to show all)</Label>
@@ -456,6 +467,107 @@ export function HomeSectionsEditor({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/* ------------------------- card slider editor ------------------------- */
+
+function CardEditor({
+  cards,
+  products,
+  onChange,
+}: {
+  cards: Section["cards"];
+  products: Picker[];
+  onChange: (v: Section["cards"]) => void;
+}) {
+  const upd = (i: number, patch: Partial<Section["cards"][number]>) =>
+    onChange(cards.map((c, idx) => (idx === i ? { ...c, ...patch } : c)));
+  return (
+    <div className="space-y-3 rounded-lg bg-muted/40 p-3">
+      <p className="text-xs text-muted-foreground">
+        Each card is a slide. Attach a product to auto-link it and show its price, or set a custom
+        link. Add as many cards as you like — they scroll horizontally on the storefront.
+      </p>
+      {cards.map((c, i) => (
+        <div key={i} className="grid gap-3 rounded-lg border border-border bg-card p-3 sm:grid-cols-2">
+          <div className="flex items-center justify-between sm:col-span-2">
+            <p className="text-sm font-semibold">Card {i + 1}</p>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-destructive hover:text-destructive"
+              onClick={() => onChange(cards.filter((_, idx) => idx !== i))}
+              aria-label="Remove card"
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Card image</Label>
+            <ImageUploader
+              value={c.image ? [c.image] : []}
+              onChange={(next) => upd(i, { image: next[0] ?? "" })}
+            />
+            <p className="text-xs text-muted-foreground">
+              Leave empty to use the attached product&apos;s image.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Title</Label>
+            <Input value={c.title} onChange={(e) => upd(i, { title: e.target.value })} placeholder="e.g. Whey Isolate" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Badge (optional)</Label>
+            <Input value={c.badge} onChange={(e) => upd(i, { badge: e.target.value })} placeholder="New · Save 20%" />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Subtitle (optional)</Label>
+            <Input value={c.subtitle} onChange={(e) => upd(i, { subtitle: e.target.value })} placeholder="Short supporting line" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Attached product</Label>
+            <select
+              value={c.productSlug}
+              onChange={(e) => upd(i, { productSlug: e.target.value })}
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+            >
+              <option value="">None</option>
+              {products.map((p) => (
+                <option key={p.slug} value={p.slug}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Button label (optional)</Label>
+            <Input value={c.ctaLabel} onChange={(e) => upd(i, { ctaLabel: e.target.value })} placeholder="Shop now" />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Custom link (optional — overrides the product link)</Label>
+            <Input
+              value={c.href}
+              onChange={(e) => upd(i, { href: e.target.value })}
+              placeholder="/products?category=protein"
+              className="font-mono"
+            />
+          </div>
+        </div>
+      ))}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() =>
+          onChange([
+            ...cards,
+            { image: "", title: "", subtitle: "", badge: "", productSlug: "", ctaLabel: "", href: "" },
+          ])
+        }
+      >
+        <Plus className="mr-1 size-4" /> Add card
+      </Button>
     </div>
   );
 }

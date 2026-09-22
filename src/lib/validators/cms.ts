@@ -82,9 +82,19 @@ export const testimonialItemSchema = z.object({
   avatar: z.string().trim().optional(),
 });
 
+export const cardItemSchema = z.object({
+  image: z.string().trim().optional(),
+  title: z.string().trim().optional(),
+  subtitle: z.string().trim().optional(),
+  badge: z.string().trim().optional(),
+  productSlug: z.string().trim().optional(),
+  ctaLabel: z.string().trim().optional(),
+  href: z.string().trim().optional(),
+});
+
 export const homeSectionSchema = z.object({
   id: z.string().min(1),
-  type: z.enum(["products", "categories", "video", "testimonials", "banner", "richtext"]),
+  type: z.enum(["products", "cards", "categories", "video", "testimonials", "banner", "richtext"]),
   title: z.string().trim().optional(),
   description: z.string().trim().optional(),
   enabled: z.boolean().optional(),
@@ -98,6 +108,7 @@ export const homeSectionSchema = z.object({
 
   categorySlugs: z.array(z.string()).optional(),
 
+  cards: z.array(cardItemSchema).max(20).optional(),
   videos: z.array(videoItemSchema).max(20).optional(),
   testimonials: z.array(testimonialItemSchema).max(30).optional(),
 

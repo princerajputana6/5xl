@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "node --env-file=.env.local scripts/seed.mjs",
+    "seed:home": "node --env-file=.env.local scripts/seed-home.mjs",
     "seed:admin": "node --env-file=.env.local scripts/seed-admin.mjs",
     "make-admin": "node --env-file=.env.local scripts/make-admin.mjs",
     "import:blogs": "node --env-file=.env.local scripts/import-blogs.mjs"

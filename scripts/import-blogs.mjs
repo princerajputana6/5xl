@@ -155,7 +155,7 @@ async function fetchPost(url) {
 /* ------------------------------ run ------------------------------ */
 
 async function run() {
-  await mongoose.connect(URI);
+  await mongoose.connect(URI, { dbName: "fivexl" });
   const urls = JSON.parse(await readFile(join(__dirname, "blog-urls.json"), "utf8")).slice(0, LIMIT);
 
   console.log(`Importing ${urls.length} posts (dry=${DRY}, force=${FORCE})…`);

@@ -49,12 +49,26 @@ const TestimonialItemSchema = new Schema(
   { _id: false }
 );
 
+/** A single card in a "card slider" section, optionally tied to a product. */
+const CardItemSchema = new Schema(
+  {
+    image: String,
+    title: String,
+    subtitle: String,
+    badge: String, // small pill, e.g. "New" / "Save 20%"
+    productSlug: String, // attached product (drives price + default link)
+    ctaLabel: String,
+    href: String, // overrides the attached product's link when set
+  },
+  { _id: false }
+);
+
 const HomeSectionSchema = new Schema(
   {
     id: { type: String, required: true },
     type: {
       type: String,
-      enum: ["products", "categories", "video", "testimonials", "banner", "richtext"],
+      enum: ["products", "cards", "categories", "video", "testimonials", "banner", "richtext"],
       required: true,
     },
     title: String,
@@ -75,6 +89,9 @@ const HomeSectionSchema = new Schema(
 
     // categories
     categorySlugs: { type: [String], default: [] },
+
+    // card slider (each card can carry an attached product)
+    cards: { type: [CardItemSchema], default: [] },
 
     // video slider
     videos: { type: [VideoItemSchema], default: [] },

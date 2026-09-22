@@ -2,9 +2,19 @@ import { connectDB } from "@/server/db";
 import { HomeContent } from "@/server/models/HomeContent";
 import type { HomeContentInput } from "@/lib/validators/cms";
 
+export type CardItemDTO = {
+  image: string;
+  title: string;
+  subtitle: string;
+  badge: string;
+  productSlug: string;
+  ctaLabel: string;
+  href: string;
+};
+
 export type HomeSectionDTO = {
   id: string;
-  type: "products" | "categories" | "video" | "testimonials" | "banner" | "richtext";
+  type: "products" | "cards" | "categories" | "video" | "testimonials" | "banner" | "richtext";
   title: string;
   description: string;
   enabled: boolean;
@@ -15,6 +25,7 @@ export type HomeSectionDTO = {
   layout: "grid" | "carousel";
   viewAllHref: string;
   categorySlugs: string[];
+  cards: CardItemDTO[];
   videos: { url: string; poster: string; caption: string; productSlug: string }[];
   testimonials: {
     author: string;
@@ -61,6 +72,15 @@ function toSectionDTO(s: Record<string, unknown>): HomeSectionDTO {
     layout: (s.layout as HomeSectionDTO["layout"]) ?? "grid",
     viewAllHref: (s.viewAllHref as string) ?? "",
     categorySlugs: (s.categorySlugs as string[]) ?? [],
+    cards: ((s.cards as Record<string, unknown>[]) ?? []).map((c) => ({
+      image: (c.image as string) ?? "",
+      title: (c.title as string) ?? "",
+      subtitle: (c.subtitle as string) ?? "",
+      badge: (c.badge as string) ?? "",
+      productSlug: (c.productSlug as string) ?? "",
+      ctaLabel: (c.ctaLabel as string) ?? "",
+      href: (c.href as string) ?? "",
+    })),
     videos: ((s.videos as Record<string, unknown>[]) ?? []).map((v) => ({
       url: (v.url as string) ?? "",
       poster: (v.poster as string) ?? "",

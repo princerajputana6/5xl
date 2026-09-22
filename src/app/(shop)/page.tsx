@@ -152,7 +152,7 @@ export default async function HomePage() {
           </h2>
           <p className="relative mx-auto mt-3 max-w-lg text-white/70">
             Create your free account and unlock rewards, faster checkout and
-            subscriber-only pricing.
+            member-only pricing.
           </p>
           <div className="relative mt-7 flex flex-wrap justify-center gap-3">
             <Button asChild size="lg" className="shadow-lg shadow-primary/20">

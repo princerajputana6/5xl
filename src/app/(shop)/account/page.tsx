@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Package, Heart, Sparkles, Repeat, LogOut } from "lucide-react";
+import { Package, Heart, Sparkles, LogOut } from "lucide-react";
 import { requireUser } from "@/lib/session";
 
 export const metadata: Metadata = { title: "My Account · 5XL" };
@@ -8,7 +8,6 @@ export const metadata: Metadata = { title: "My Account · 5XL" };
 const CARDS = [
   { href: "/account/orders", icon: Package, title: "My orders", desc: "Track and review your orders" },
   { href: "/account/rewards", icon: Sparkles, title: "Rewards & wallet", desc: "Points, credit and history" },
-  { href: "/account/subscriptions", icon: Repeat, title: "Subscriptions", desc: "Manage recurring deliveries" },
   { href: "/account/wishlist", icon: Heart, title: "Wishlist", desc: "Products you've saved" },
 ];
 
