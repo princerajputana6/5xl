@@ -168,7 +168,7 @@ export default async function ProductDetailPage({
 
       {/* Nutrition facts */}
       {product.nutritionFacts.length > 0 && (
-        <section className="mt-10">
+        <section className="mt-8 md:mt-10">
           <h2 className="mb-4 font-display text-2xl font-extrabold uppercase tracking-tight">
             Nutrition Facts
           </h2>
@@ -189,7 +189,7 @@ export default async function ProductDetailPage({
 
       {/* Ingredients */}
       {product.ingredients.length > 0 && (
-        <section className="mt-10 max-w-3xl">
+        <section className="mt-8 max-w-3xl md:mt-10">
           <h2 className="mb-4 font-display text-2xl font-extrabold uppercase tracking-tight">
             Ingredients
           </h2>
@@ -206,7 +206,7 @@ export default async function ProductDetailPage({
       <ProductFaqs faqs={getProductFaqs(product.categorySlug)} />
 
       {/* Ratings & Reviews */}
-      <section className="mt-14">
+      <section className="mt-10 md:mt-14">
         <h2 className="mb-6 font-display text-2xl font-extrabold uppercase tracking-tight">
           Ratings &amp; Reviews
         </h2>
@@ -223,7 +223,7 @@ export default async function ProductDetailPage({
 
       {/* Related */}
       {related.length > 0 && (
-        <section className="mt-16">
+        <section className="mt-10 md:mt-14">
           <h2 className="mb-6 font-display text-2xl font-extrabold uppercase tracking-tight">
             You might also like
           </h2>
