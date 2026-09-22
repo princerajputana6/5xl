@@ -63,7 +63,6 @@ export default function RootLayout({
       >
         {GTM_ID && (
           <noscript>
-            {/* eslint-disable-next-line @next/next/no-sync-scripts */}
             <iframe
               src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
               height="0"
