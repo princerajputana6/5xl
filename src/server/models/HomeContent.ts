@@ -26,6 +26,16 @@ const FeatureItemSchema = new Schema(
   { _id: false }
 );
 
+/** A single hero stat chip (e.g. "50K+" / "Athletes fueled"). */
+const HeroStatSchema = new Schema(
+  {
+    icon: String, // lucide icon name
+    value: { type: String, required: true },
+    label: { type: String, required: true },
+  },
+  { _id: false }
+);
+
 /* ---- Flexible, admin-orderable homepage sections ---- */
 
 const VideoItemSchema = new Schema(
@@ -115,7 +125,22 @@ const HomeContentSchema = new Schema(
     key: { type: String, required: true, unique: true, default: "home" },
     announcement: { type: String },
     heroSlides: { type: [HeroSlideSchema], default: [] },
+    heroStats: { type: [HeroStatSchema], default: [] },
+    heroSecondaryCtaLabel: { type: String },
+    heroSecondaryCtaHref: { type: String },
     features: { type: [FeatureItemSchema], default: [] },
+    /** Scrolling benefits ticker items. */
+    marqueeItems: { type: [String], default: [] },
+    /** Bottom "join us" call-to-action block. */
+    cta: {
+      eyebrow: String,
+      title: String,
+      subtitle: String,
+      primaryLabel: String,
+      primaryHref: String,
+      secondaryLabel: String,
+      secondaryHref: String,
+    },
     categorySectionTitle: { type: String, default: "Shop by category" },
     showFeatured: { type: Boolean, default: true },
     showBestsellers: { type: Boolean, default: true },

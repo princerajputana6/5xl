@@ -2,9 +2,10 @@ import { Star } from "lucide-react";
 
 /**
  * Seamless scrolling ticker of brand promises. The list is rendered twice so
- * the -50% keyframe loops without a seam. Purely decorative.
+ * the -50% keyframe loops without a seam. Purely decorative. Items are
+ * admin-editable via the homepage CMS (falls back to the brand defaults).
  */
-const ITEMS = [
+const DEFAULT_ITEMS = [
   "100% Lab-Tested",
   "Authentic Guaranteed",
   "Free Shipping over ₹999",
@@ -15,8 +16,9 @@ const ITEMS = [
   "Made for Serious Lifters",
 ];
 
-export function BenefitsMarquee() {
-  const track = [...ITEMS, ...ITEMS];
+export function BenefitsMarquee({ items }: { items?: string[] }) {
+  const list = items && items.length > 0 ? items : DEFAULT_ITEMS;
+  const track = [...list, ...list];
   return (
     <div className="relative flex overflow-hidden border-y border-border bg-neutral-950 py-3 text-white">
       {/* edge fades */}

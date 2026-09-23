@@ -11,7 +11,8 @@
     "seed:home": "node --env-file=.env.local scripts/seed-home.mjs",
     "seed:admin": "node --env-file=.env.local scripts/seed-admin.mjs",
     "make-admin": "node --env-file=.env.local scripts/make-admin.mjs",
-    "import:blogs": "node --env-file=.env.local scripts/import-blogs.mjs"
+    "import:blogs": "node --env-file=.env.local scripts/import-blogs.mjs",
+    "categorize:blogs": "node --env-file=.env.local scripts/categorize-blogs.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.1",

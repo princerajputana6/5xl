@@ -71,10 +71,18 @@ export default async function HomePage() {
   return (
     <>
       {/* Hero */}
-      <Hero products={featuredAll.slice(0, HERO_ITEMS)} content={heroContent} />
+      <Hero
+        products={featuredAll.slice(0, HERO_ITEMS)}
+        content={{
+          ...heroContent,
+          stats: home.heroStats,
+          secondaryCtaLabel: home.heroSecondaryCtaLabel,
+          secondaryCtaHref: home.heroSecondaryCtaHref,
+        }}
+      />
 
       {/* Scrolling benefits ticker */}
-      <BenefitsMarquee />
+      <BenefitsMarquee items={home.marqueeItems} />
 
       {hasCustomSections ? (
         /* Fully dynamic, admin-ordered sections */
@@ -144,28 +152,33 @@ export default async function HomePage() {
           <Parallax className="pointer-events-none absolute -bottom-10 -left-4 select-none opacity-10" distance={-30}>
             <span className="text-[7rem] leading-none">💪</span>
           </Parallax>
-          <span className="relative inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-            Join 5XL
-          </span>
+          {home.cta.eyebrow && (
+            <span className="relative inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+              {home.cta.eyebrow}
+            </span>
+          )}
           <h2 className="relative mt-5 font-display text-4xl font-extrabold uppercase tracking-tight md:text-5xl">
-            Ready to level up?
+            {home.cta.title}
           </h2>
-          <p className="relative mx-auto mt-3 max-w-lg text-white/70">
-            Create your free account and unlock rewards, faster checkout and
-            member-only pricing.
-          </p>
+          {home.cta.subtitle && (
+            <p className="relative mx-auto mt-3 max-w-lg text-white/70">{home.cta.subtitle}</p>
+          )}
           <div className="relative mt-7 flex flex-wrap justify-center gap-3">
-            <Button asChild size="lg" className="shadow-lg shadow-primary/20">
-              <Link href="/register">Create your account</Link>
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="border-white/25 bg-white/5 text-white hover:bg-white/15 hover:text-white"
-            >
-              <Link href="/products">Browse products</Link>
-            </Button>
+            {home.cta.primaryLabel && (
+              <Button asChild size="lg" className="shadow-lg shadow-primary/20">
+                <Link href={home.cta.primaryHref || "/register"}>{home.cta.primaryLabel}</Link>
+              </Button>
+            )}
+            {home.cta.secondaryLabel && (
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="border-white/25 bg-white/5 text-white hover:bg-white/15 hover:text-white"
+              >
+                <Link href={home.cta.secondaryHref || "/products"}>{home.cta.secondaryLabel}</Link>
+              </Button>
+            )}
           </div>
         </Reveal>
       </section>

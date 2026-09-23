@@ -65,6 +65,22 @@ export const featureItemSchema = z.object({
   desc: z.string().trim().optional(),
 });
 
+export const heroStatSchema = z.object({
+  icon: z.string().trim().optional(), // lucide icon name
+  value: z.string().trim().min(1, "Value is required"),
+  label: z.string().trim().min(1, "Label is required"),
+});
+
+export const ctaBlockSchema = z.object({
+  eyebrow: z.string().trim().optional(),
+  title: z.string().trim().optional(),
+  subtitle: z.string().trim().optional(),
+  primaryLabel: z.string().trim().optional(),
+  primaryHref: z.string().trim().optional(),
+  secondaryLabel: z.string().trim().optional(),
+  secondaryHref: z.string().trim().optional(),
+});
+
 /* ---- Dynamic homepage sections ---- */
 
 export const videoItemSchema = z.object({
@@ -124,7 +140,12 @@ export type HomeSectionInput = z.infer<typeof homeSectionSchema>;
 export const homeContentSchema = z.object({
   announcement: z.string().trim().optional(),
   heroSlides: z.array(heroSlideSchema).max(6).optional(),
+  heroStats: z.array(heroStatSchema).max(4).optional(),
+  heroSecondaryCtaLabel: z.string().trim().optional(),
+  heroSecondaryCtaHref: z.string().trim().optional(),
   features: z.array(featureItemSchema).max(8).optional(),
+  marqueeItems: z.array(z.string().trim()).max(16).optional(),
+  cta: ctaBlockSchema.optional(),
   categorySectionTitle: z.string().trim().optional(),
   showFeatured: z.boolean().optional(),
   showBestsellers: z.boolean().optional(),

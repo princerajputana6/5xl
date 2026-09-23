@@ -3,17 +3,18 @@
 import * as React from "react";
 import Link from "next/link";
 import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
-import { ArrowRight, ShieldCheck, Star, Zap, FlaskConical } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HeroParticles } from "@/components/shop/hero-particles";
 import { HeroCardFan } from "@/components/shop/hero-card-fan";
+import { iconByName } from "@/lib/icon-map";
 import type { ProductCardDTO } from "@/types/catalog";
 
-const stats = [
-  { icon: Zap, value: "50K+", label: "Athletes fueled" },
-  { icon: FlaskConical, value: "100%", label: "Lab-tested" },
-  { icon: Star, value: "4.9", label: "Avg. rating" },
-  { icon: ShieldCheck, value: "24h", label: "Fast dispatch" },
+const DEFAULT_STATS = [
+  { icon: "Zap", value: "50K+", label: "Athletes fueled" },
+  { icon: "FlaskConical", value: "100%", label: "Lab-tested" },
+  { icon: "Star", value: "4.9", label: "Avg. rating" },
+  { icon: "ShieldCheck", value: "24h", label: "Fast dispatch" },
 ];
 
 const ease = [0.22, 1, 0.36, 1] as const;
@@ -30,6 +31,9 @@ export type HeroContent = {
   subtitle?: string;
   ctaLabel?: string;
   ctaHref?: string;
+  secondaryCtaLabel?: string;
+  secondaryCtaHref?: string;
+  stats?: { icon: string; value: string; label: string }[];
 };
 
 /** Splits a title so the final word gets the skewed primary highlight. */
@@ -58,6 +62,8 @@ export function Hero({
   const bgScale = useTransform(scrollYProgress, [0, 1], [1, 1.12]);
   const copyY = useTransform(scrollYProgress, [0, 1], [0, 120]);
   const copyOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
+
+  const stats = content?.stats?.length ? content.stats : DEFAULT_STATS;
 
   const container = {
     hidden: {},
@@ -183,35 +189,44 @@ export function Hero({
                 <ArrowRight className="ml-1 size-4 transition-transform group-hover:translate-x-1" />
               </Link>
             </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="border-white/25 bg-white/5 text-white backdrop-blur-sm hover:bg-white/15 hover:text-white"
-            >
-              <Link href="/products?sort=rating">Shop bestsellers</Link>
-            </Button>
+            {(content?.secondaryCtaLabel ?? "Shop bestsellers") && (
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="border-white/25 bg-white/5 text-white backdrop-blur-sm hover:bg-white/15 hover:text-white"
+              >
+                <Link href={content?.secondaryCtaHref || "/products?sort=rating"}>
+                  {content?.secondaryCtaLabel || "Shop bestsellers"}
+                </Link>
+              </Button>
+            )}
           </motion.div>
 
           {/* Stat row */}
-          <motion.dl
-            variants={item}
-            className="mt-6 grid w-full max-w-xl grid-cols-2 gap-x-6 gap-y-5 border-t border-white/15 pt-6 sm:grid-cols-4"
-          >
-            {stats.map((s) => (
-              <div key={s.label} className="flex flex-col">
-                <div className="flex items-center gap-1.5">
-                  <s.icon className="size-4 text-primary" />
-                  <dt className="font-display text-2xl font-extrabold tracking-tight">
-                    {s.value}
-                  </dt>
-                </div>
-                <dd className="mt-0.5 text-xs uppercase tracking-wider text-white/55">
-                  {s.label}
-                </dd>
-              </div>
-            ))}
-          </motion.dl>
+          {stats.length > 0 && (
+            <motion.dl
+              variants={item}
+              className="mt-6 grid w-full max-w-xl grid-cols-2 gap-x-6 gap-y-5 border-t border-white/15 pt-6 sm:grid-cols-4"
+            >
+              {stats.map((s, i) => {
+                const Icon = iconByName(s.icon);
+                return (
+                  <div key={`${s.label}-${i}`} className="flex flex-col">
+                    <div className="flex items-center gap-1.5">
+                      <Icon className="size-4 text-primary" />
+                      <dt className="font-display text-2xl font-extrabold tracking-tight">
+                        {s.value}
+                      </dt>
+                    </div>
+                    <dd className="mt-0.5 text-xs uppercase tracking-wider text-white/55">
+                      {s.label}
+                    </dd>
+                  </div>
+                );
+              })}
+            </motion.dl>
+          )}
         </motion.div>
 
         {/* Featured product hand (teen-patti fan) */}

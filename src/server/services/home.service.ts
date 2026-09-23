@@ -40,6 +40,18 @@ export type HomeSectionDTO = {
   html: string;
 };
 
+export type HeroStatDTO = { icon: string; value: string; label: string };
+
+export type CtaBlockDTO = {
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  primaryLabel: string;
+  primaryHref: string;
+  secondaryLabel: string;
+  secondaryHref: string;
+};
+
 export type HomeContentDTO = {
   announcement: string;
   heroSlides: {
@@ -50,7 +62,12 @@ export type HomeContentDTO = {
     ctaHref: string;
     image: string;
   }[];
+  heroStats: HeroStatDTO[];
+  heroSecondaryCtaLabel: string;
+  heroSecondaryCtaHref: string;
   features: { icon: string; title: string; desc: string }[];
+  marqueeItems: string[];
+  cta: CtaBlockDTO;
   categorySectionTitle: string;
   showFeatured: boolean;
   showBestsellers: boolean;
@@ -115,12 +132,40 @@ export const HOME_DEFAULTS: HomeContentDTO = {
       image: "",
     },
   ],
+  heroStats: [
+    { icon: "Zap", value: "50K+", label: "Athletes fueled" },
+    { icon: "FlaskConical", value: "100%", label: "Lab-tested" },
+    { icon: "Star", value: "4.9", label: "Avg. rating" },
+    { icon: "ShieldCheck", value: "24h", label: "Fast dispatch" },
+  ],
+  heroSecondaryCtaLabel: "Shop bestsellers",
+  heroSecondaryCtaHref: "/products?sort=rating",
   features: [
     { icon: "FlaskConical", title: "Lab-Tested", desc: "Every batch third-party tested for purity & label accuracy." },
     { icon: "Truck", title: "Fast Delivery", desc: "Dispatched within 24h, delivered across India in 2–5 days." },
     { icon: "ShieldCheck", title: "Authentic Only", desc: "Sourced direct — zero fakes, guaranteed or money back." },
     { icon: "BadgeCheck", title: "Expert Backed", desc: "Formulated with coaches and sports nutritionists." },
   ],
+  marqueeItems: [
+    "100% Lab-Tested",
+    "Authentic Guaranteed",
+    "Free Shipping over ₹999",
+    "24h Dispatch",
+    "50,000+ Athletes Fueled",
+    "No Added Sugar",
+    "FSSAI Certified",
+    "Made for Serious Lifters",
+  ],
+  cta: {
+    eyebrow: "Join 5XL",
+    title: "Ready to level up?",
+    subtitle:
+      "Create your free account and unlock rewards, faster checkout and member-only pricing.",
+    primaryLabel: "Create your account",
+    primaryHref: "/register",
+    secondaryLabel: "Browse products",
+    secondaryHref: "/products",
+  },
   categorySectionTitle: "Shop by category",
   showFeatured: true,
   showBestsellers: true,
@@ -144,9 +189,36 @@ function toDTO(doc: Record<string, unknown> | null): HomeContentDTO {
           image: s.image ?? "",
         }))
       : HOME_DEFAULTS.heroSlides,
+    heroStats: (() => {
+      const raw = (doc.heroStats as HomeContentDTO["heroStats"] | undefined) ?? [];
+      return raw.length
+        ? raw.map((s) => ({ icon: s.icon ?? "", value: s.value ?? "", label: s.label ?? "" }))
+        : HOME_DEFAULTS.heroStats;
+    })(),
+    heroSecondaryCtaLabel:
+      (doc.heroSecondaryCtaLabel as string) ?? HOME_DEFAULTS.heroSecondaryCtaLabel,
+    heroSecondaryCtaHref:
+      (doc.heroSecondaryCtaHref as string) ?? HOME_DEFAULTS.heroSecondaryCtaHref,
     features: features.length
       ? features.map((f) => ({ icon: f.icon ?? "", title: f.title ?? "", desc: f.desc ?? "" }))
       : HOME_DEFAULTS.features,
+    marqueeItems: (() => {
+      const raw = (doc.marqueeItems as string[] | undefined) ?? [];
+      return raw.filter(Boolean).length ? raw.filter(Boolean) : HOME_DEFAULTS.marqueeItems;
+    })(),
+    cta: (() => {
+      const c = (doc.cta as Partial<CtaBlockDTO> | undefined) ?? {};
+      const d = HOME_DEFAULTS.cta;
+      return {
+        eyebrow: c.eyebrow ?? d.eyebrow,
+        title: c.title ?? d.title,
+        subtitle: c.subtitle ?? d.subtitle,
+        primaryLabel: c.primaryLabel ?? d.primaryLabel,
+        primaryHref: c.primaryHref ?? d.primaryHref,
+        secondaryLabel: c.secondaryLabel ?? d.secondaryLabel,
+        secondaryHref: c.secondaryHref ?? d.secondaryHref,
+      };
+    })(),
     categorySectionTitle: (doc.categorySectionTitle as string) || HOME_DEFAULTS.categorySectionTitle,
     showFeatured: doc.showFeatured !== false,
     showBestsellers: doc.showBestsellers !== false,
