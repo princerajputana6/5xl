@@ -15,8 +15,37 @@ import {
   Quote,
   RemoveFormatting,
   Code,
+  Eraser,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+/** Strip all HTML to readable plain text, keeping paragraph/line breaks. */
+function htmlToPlainText(html: string): string {
+  return html
+    .replace(/<\s*br\s*\/?\s*>/gi, "\n")
+    .replace(/<\/\s*(p|div|h[1-6]|li|tr|blockquote)\s*>/gi, "\n")
+    .replace(/<\s*li[^>]*>/gi, "• ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;|&apos;/g, "'")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** Re-wrap plain text as simple paragraphs so the article still reads well. */
+function plainTextToHtml(text: string): string {
+  const blocks = text
+    .split(/\n{2,}/)
+    .map((b) => b.trim())
+    .filter(Boolean);
+  if (blocks.length === 0) return "";
+  return blocks.map((b) => `<p>${b.replace(/\n/g, "<br>")}</p>`).join("");
+}
 
 function ToolbarButton({
   onClick,
@@ -89,6 +118,20 @@ export function RichTextEditor({
     if (url) exec("createLink", url);
   }
 
+  function convertToPlainText() {
+    const current = ref.current && mode === "rich" ? ref.current.innerHTML : value;
+    if (!htmlToPlainText(current)) return;
+    if (
+      !window.confirm(
+        "Convert to plain text? This removes all formatting (bold, headings, links, images, tables) and keeps only the words and paragraph breaks."
+      )
+    )
+      return;
+    const html = plainTextToHtml(htmlToPlainText(current));
+    if (ref.current) ref.current.innerHTML = html;
+    onChange(html);
+  }
+
   return (
     <div className="overflow-hidden rounded-md border border-input">
       {/* toolbar */}
@@ -144,9 +187,19 @@ export function RichTextEditor({
 
         <button
           type="button"
+          onClick={convertToPlainText}
+          onMouseDown={(e) => e.preventDefault()}
+          className="ml-auto inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          title="Strip all formatting and convert to plain text"
+        >
+          <Eraser className="size-3.5" /> Plain text
+        </button>
+
+        <button
+          type="button"
           onClick={() => setMode((m) => (m === "rich" ? "html" : "rich"))}
           className={cn(
-            "ml-auto inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors",
+            "inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors",
             mode === "html"
               ? "bg-primary text-primary-foreground"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"
