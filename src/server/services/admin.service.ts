@@ -288,6 +288,11 @@ export async function getProductForAdmin(id: string): Promise<AdminProductForm |
     isFeatured: Boolean(p.isFeatured),
     isBestseller: Boolean(p.isBestseller),
     benefits: (p.benefits as string[] | undefined) ?? [],
+    keyBenefits: ((p.keyBenefits as { title?: string; description?: string; images?: string[] }[] | undefined) ?? []).map((k) => ({
+      title: k.title ?? "",
+      description: k.description ?? "",
+      images: (k.images as string[]) ?? [],
+    })),
     ingredients: (p.ingredients as string[] | undefined) ?? [],
     usage: p.usage ?? "",
     nutritionFacts: (p.nutritionFacts ?? []).map((n) => ({

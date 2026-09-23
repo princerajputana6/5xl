@@ -18,6 +18,16 @@ const NutritionRowSchema = new Schema(
   { _id: false }
 );
 
+/** Admin-authored key benefit: a title with optional body text and/or images. */
+const KeyBenefitSchema = new Schema(
+  {
+    title: { type: String, required: true },
+    description: { type: String, default: "" },
+    images: { type: [String], default: [] },
+  },
+  { _id: false }
+);
+
 const ProductSchema = new Schema(
   {
     name: { type: String, required: true, trim: true },
@@ -42,6 +52,8 @@ const ProductSchema = new Schema(
     nutritionFacts: { type: [NutritionRowSchema], default: [] },
     ingredients: { type: [String], default: [] },
     benefits: { type: [String], default: [] },
+    /** Rich, admin-managed key benefits (title + text + images). */
+    keyBenefits: { type: [KeyBenefitSchema], default: [] },
     usage: { type: String },
 
     tags: { type: [String], default: [], index: true },

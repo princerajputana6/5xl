@@ -27,6 +27,7 @@ import { OffersStrip } from "@/components/shop/offers-strip";
 import { OptionSwatches } from "@/components/shop/option-swatches";
 import { PincodeChecker } from "@/components/shop/pincode-checker";
 import { KeyBenefits } from "@/components/shop/key-benefits";
+import { ProductKeyBenefits } from "@/components/shop/product-key-benefits";
 import { FrequentlyBoughtTogether } from "@/components/shop/frequently-bought-together";
 import { AboutProduct } from "@/components/shop/about-product";
 import { ProductFaqs } from "@/components/shop/product-faqs";
@@ -156,7 +157,11 @@ export default async function ProductDetailPage({
       <ProductStickyBar product={product} />
       </ProductBuyProvider>
 
-      <KeyBenefits benefits={getKeyBenefits(product.categorySlug)} />
+      {product.keyBenefits.length > 0 ? (
+        <ProductKeyBenefits items={product.keyBenefits} />
+      ) : (
+        <KeyBenefits benefits={getKeyBenefits(product.categorySlug)} />
+      )}
 
       <FrequentlyBoughtTogether product={product} suggestions={related} />
 

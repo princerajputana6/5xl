@@ -36,6 +36,7 @@ export type ProductDetailDTO = ProductCardDTO & {
   nutritionFacts: { label: string; value: string }[];
   ingredients: string[];
   benefits: string[];
+  keyBenefits: { title: string; description: string; images: string[] }[];
   usage?: string;
   tags: string[];
   goals: string[];

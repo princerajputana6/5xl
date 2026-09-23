@@ -13,6 +13,9 @@ import {
   Settings2,
   Search,
   AlertCircle,
+  Sparkles,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +36,7 @@ import { cn } from "@/lib/utils";
 import type { AdminProductForm } from "@/server/services/admin.service";
 
 type Option = { id: string; name: string };
+type KeyBenefitDraft = { title: string; description: string; images: string[] };
 
 const slugify = (s: string) =>
   s
@@ -68,6 +72,79 @@ function Section({
       </header>
       <div className="p-6">{children}</div>
     </section>
+  );
+}
+
+/** Editor for the rich, per-product key benefits (title + text + images). */
+function KeyBenefitsEditor({
+  value,
+  onChange,
+}: {
+  value: KeyBenefitDraft[];
+  onChange: (next: KeyBenefitDraft[]) => void;
+}) {
+  const update = (i: number, patch: Partial<KeyBenefitDraft>) =>
+    onChange(value.map((b, idx) => (idx === i ? { ...b, ...patch } : b)));
+
+  return (
+    <div className="space-y-3">
+      {value.map((b, i) => (
+        <div key={i} className="space-y-3 rounded-lg border border-border p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold">Benefit {i + 1}</p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="text-destructive hover:text-destructive"
+              onClick={() => onChange(value.filter((_, idx) => idx !== i))}
+              aria-label="Remove benefit"
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Title</Label>
+            <Input
+              value={b.title}
+              onChange={(e) => update(i, { title: e.target.value })}
+              placeholder="Faster recovery"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Text (optional)</Label>
+            <textarea
+              value={b.description}
+              onChange={(e) => update(i, { description: e.target.value })}
+              rows={2}
+              placeholder="Explain the benefit in a sentence or two…"
+              className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Images (optional — upload one or more)</Label>
+            <ImageUploader
+              value={b.images}
+              onChange={(next) => update(i, { images: next })}
+            />
+          </div>
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => onChange([...value, { title: "", description: "", images: [] }])}
+      >
+        <Plus className="mr-1 size-4" /> Add key benefit
+      </Button>
+      {value.length === 0 && (
+        <p className="text-xs text-muted-foreground">
+          No custom key benefits yet — the page will fall back to the category default until you add
+          some.
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -109,6 +186,13 @@ export function ProductForm({
 
   const [images, setImages] = React.useState<string[]>(initial?.images ?? []);
   const [benefits, setBenefits] = React.useState<string[]>(initial?.benefits ?? []);
+  const [keyBenefits, setKeyBenefits] = React.useState<KeyBenefitDraft[]>(
+    (initial?.keyBenefits ?? []).map((k) => ({
+      title: k.title ?? "",
+      description: k.description ?? "",
+      images: k.images ?? [],
+    }))
+  );
   const [ingredients, setIngredients] = React.useState<string[]>(initial?.ingredients ?? []);
   const [nutrition, setNutrition] = React.useState<NutritionRow[]>(
     initial?.nutritionFacts ?? []
@@ -170,6 +254,13 @@ export function ProductForm({
       goals: csv(form.goals),
       tags: csv(form.tags),
       benefits: benefits.filter(Boolean),
+      keyBenefits: keyBenefits
+        .filter((k) => k.title.trim() || k.images.length > 0)
+        .map((k) => ({
+          title: k.title.trim(),
+          description: k.description.trim() || undefined,
+          images: k.images,
+        })),
       ingredients: ingredients.filter(Boolean),
       nutritionFacts: nutrition.filter((n) => n.label && n.value),
       variants: variants.filter((v) => v.label && v.sku),
@@ -351,9 +442,9 @@ export function ProductForm({
               </div>
 
               <div className="space-y-1.5">
-                <Label>Key benefits</Label>
+                <Label>Benefit highlights (bullet list)</Label>
                 <p className="text-xs text-muted-foreground">
-                  Shown as a checked list on the product page.
+                  Shown as a quick checked list in the “About” area.
                 </p>
                 <FieldList
                   value={benefits}
@@ -393,6 +484,14 @@ export function ProductForm({
                 <NutritionEditor value={nutrition} onChange={setNutrition} />
               </div>
             </div>
+          </Section>
+
+          <Section
+            icon={Sparkles}
+            title="Key Benefits section"
+            description="The card grid on the product page. Each benefit can have text and/or images."
+          >
+            <KeyBenefitsEditor value={keyBenefits} onChange={setKeyBenefits} />
           </Section>
 
           <Section

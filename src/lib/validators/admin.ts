@@ -22,6 +22,12 @@ export const nutritionRowSchema = z.object({
   value: z.string().trim().min(1, "Value is required"),
 });
 
+export const keyBenefitSchema = z.object({
+  title: z.string().trim().min(1, "Benefit title is required"),
+  description: z.string().trim().optional(),
+  images: z.array(z.string()).max(6, "Up to 6 images per benefit").optional(),
+});
+
 export const productVariantSchema = z.object({
   label: z.string().trim().min(1, "Variant label is required"),
   flavour: z.string().trim().optional(),
@@ -57,6 +63,7 @@ export const adminProductSchema = z.object({
 
   // Storefront detail content
   benefits: z.array(z.string().trim().min(1)).optional(),
+  keyBenefits: z.array(keyBenefitSchema).max(12).optional(),
   ingredients: z.array(z.string().trim().min(1)).optional(),
   usage: z.string().trim().optional(),
   nutritionFacts: z.array(nutritionRowSchema).optional(),
