@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ImageUploader } from "@/components/admin/image-uploader";
+import { RichTextEditor } from "@/components/admin/rich-text-editor";
 
 type PostWithId = BlogPostInput & { id: string };
 
@@ -125,17 +126,11 @@ export function BlogForm({ post }: { post?: PostWithId }) {
             />
           </div>
           <div className="space-y-1.5">
-            <Label>Content (HTML)</Label>
-            <textarea
-              value={contentHtml}
-              onChange={(e) => setContentHtml(e.target.value)}
-              rows={20}
-              className="w-full rounded-md border border-input bg-background p-3 font-mono text-sm"
-              placeholder="<h2>Heading</h2><p>Write your article using HTML tags…</p>"
-            />
+            <Label>Content</Label>
+            <RichTextEditor value={contentHtml} onChange={setContentHtml} />
             <p className="text-xs text-muted-foreground">
-              Supports headings, paragraphs, lists, links, images, tables and embeds — the same
-              format as the existing site articles.
+              Write and format normally — bold, italic, headings, lists and links. Use the “HTML”
+              button only if you need to paste raw markup (e.g. an imported article).
             </p>
           </div>
         </div>
