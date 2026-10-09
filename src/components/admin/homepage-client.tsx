@@ -8,7 +8,6 @@ import type { HomeContentDTO } from "@/server/services/home.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { ImageUploader } from "@/components/admin/image-uploader";
 import { HomeSectionsEditor } from "@/components/admin/home-sections-editor";
 
@@ -47,8 +46,6 @@ export function HomepageClient({
   const [pending, setPending] = React.useState(false);
   const [announcement, setAnnouncement] = React.useState(content.announcement);
   const [sectionTitle, setSectionTitle] = React.useState(content.categorySectionTitle);
-  const [showFeatured, setShowFeatured] = React.useState(content.showFeatured);
-  const [showBestsellers, setShowBestsellers] = React.useState(content.showBestsellers);
   const [slides, setSlides] = React.useState<Slide[]>(content.heroSlides);
   const [heroStats, setHeroStats] = React.useState<HeroStat[]>(content.heroStats);
   const [heroSecondaryLabel, setHeroSecondaryLabel] = React.useState(content.heroSecondaryCtaLabel);
@@ -91,8 +88,8 @@ export function HomepageClient({
     const payload = {
       announcement: announcement.trim() || undefined,
       categorySectionTitle: sectionTitle.trim() || undefined,
-      showFeatured,
-      showBestsellers,
+      showFeatured: content.showFeatured,
+      showBestsellers: content.showBestsellers,
       featuredCategorySlugs: featuredSlugs,
       heroSlides: slides
         .filter((s) => s.title.trim())
@@ -394,17 +391,6 @@ export function HomepageClient({
             Icon names come from lucide.dev (e.g. ShieldCheck, Truck, FlaskConical, BadgeCheck).
           </p>
         </div>
-      </Section>
-
-      <Section title="Sections" hint="Toggle homepage product rows.">
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox checked={showFeatured} onCheckedChange={(v) => setShowFeatured(v === true)} />
-          Show “Featured” products row
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox checked={showBestsellers} onCheckedChange={(v) => setShowBestsellers(v === true)} />
-          Show “Bestsellers” row
-        </label>
       </Section>
 
       <div className="flex justify-end">

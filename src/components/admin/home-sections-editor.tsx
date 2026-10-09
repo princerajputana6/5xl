@@ -21,6 +21,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ImageUploader } from "@/components/admin/image-uploader";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 type Section = HomeSectionDTO;
@@ -449,25 +457,277 @@ export function HomeSectionsEditor({
         );
       })}
 
-      {/* add-section palette */}
-      <div className="flex flex-wrap gap-2 rounded-xl border border-dashed border-border p-3">
-        <span className="self-center text-sm font-medium text-muted-foreground">Add section:</span>
-        {(Object.keys(TYPE_META) as Section["type"][]).map((type) => {
-          const M = TYPE_META[type];
-          return (
-            <Button
-              key={type}
-              variant="outline"
-              size="sm"
-              onClick={() => onChange([...value, emptySection(type)])}
-            >
-              <M.icon className="mr-1 size-4" />
-              {M.label}
-            </Button>
-          );
-        })}
-      </div>
+      {value.length === 0 && (
+        <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+          No sections yet. Click <strong>Add section</strong> to build your homepage — a bestseller
+          row, a recommended row, category tiles, and more.
+        </p>
+      )}
+
+      {/* guided add-section wizard */}
+      <AddSectionDialog
+        categories={categories}
+        products={products}
+        onCreate={(section) => onChange([...value, section])}
+      />
     </div>
+  );
+}
+
+/* ----------------------- guided "add section" wizard ----------------------- */
+
+function AddSectionDialog({
+  categories,
+  products,
+  onCreate,
+}: {
+  categories: Picker[];
+  products: Picker[];
+  onCreate: (section: Section) => void;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [title, setTitle] = React.useState("");
+  const [description, setDescription] = React.useState("");
+  const [type, setType] = React.useState<Section["type"] | null>(null);
+  const [productSource, setProductSource] =
+    React.useState<Section["productSource"]>("manual");
+  const [productSlugs, setProductSlugs] = React.useState<string[]>([]);
+  const [categorySlug, setCategorySlug] = React.useState("");
+  const [categorySlugs, setCategorySlugs] = React.useState<string[]>([]);
+  const [showAdvanced, setShowAdvanced] = React.useState(false);
+
+  function reset() {
+    setTitle("");
+    setDescription("");
+    setType(null);
+    setProductSource("manual");
+    setProductSlugs([]);
+    setCategorySlug("");
+    setCategorySlugs([]);
+    setShowAdvanced(false);
+  }
+
+  function create() {
+    if (!type) return;
+    const section: Section = {
+      ...emptySection(type),
+      title: title.trim(),
+      description: description.trim(),
+    };
+    if (type === "products") {
+      section.productSource = productSource;
+      section.productSlugs = productSlugs;
+      section.categorySlug = categorySlug;
+    }
+    if (type === "categories") {
+      section.categorySlugs = categorySlugs;
+    }
+    onCreate(section);
+    reset();
+    setOpen(false);
+  }
+
+  const canCreate =
+    Boolean(type) &&
+    title.trim().length > 0 &&
+    !(type === "products" && productSource === "manual" && productSlugs.length === 0) &&
+    !(type === "products" && productSource === "category" && !categorySlug);
+
+  const PRIMARY: { type: Section["type"]; label: string; hint: string; icon: typeof Package }[] = [
+    {
+      type: "products",
+      label: "Products showcase",
+      hint: "Hand-pick products (or auto-pull bestsellers/featured) — e.g. “Bestsellers”, “Recommended”.",
+      icon: Package,
+    },
+    {
+      type: "categories",
+      label: "Category showcase",
+      hint: "Show category tiles so shoppers can browse by type.",
+      icon: LayoutGrid,
+    },
+  ];
+  const ADVANCED: Section["type"][] = ["cards", "video", "testimonials", "banner", "richtext"];
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (!o) reset();
+      }}
+    >
+      <Button onClick={() => setOpen(true)} size="lg" className="w-full sm:w-auto">
+        <Plus className="mr-1 size-4" /> Add section
+      </Button>
+
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Add a homepage section</DialogTitle>
+          <DialogDescription>
+            Name the section, then choose what it shows and pick the items.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-5">
+          {/* 1. basics */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>Section name</Label>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Bestsellers"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Description (optional)</Label>
+              <Input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="The formulas lifters keep coming back to."
+              />
+            </div>
+          </div>
+
+          {/* 2. type */}
+          <div className="space-y-2">
+            <Label>What should this section show?</Label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {PRIMARY.map((p) => {
+                const Icon = p.icon;
+                const active = type === p.type;
+                return (
+                  <button
+                    key={p.type}
+                    type="button"
+                    onClick={() => setType(p.type)}
+                    className={cn(
+                      "flex flex-col items-start gap-1 rounded-xl border p-4 text-left transition-colors",
+                      active
+                        ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                        : "border-border hover:border-foreground/30"
+                    )}
+                  >
+                    <span className="flex items-center gap-2 font-semibold">
+                      <Icon className="size-4 text-primary" /> {p.label}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{p.hint}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowAdvanced((v) => !v)}
+              className="text-xs font-medium text-muted-foreground underline-offset-2 hover:underline"
+            >
+              {showAdvanced ? "Hide" : "More"} section types (card slider, video, testimonials, banner, rich text)
+            </button>
+            {showAdvanced && (
+              <div className="flex flex-wrap gap-2">
+                {ADVANCED.map((t) => {
+                  const M = TYPE_META[t];
+                  const active = type === t;
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setType(t)}
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm transition-colors",
+                        active
+                          ? "border-primary bg-primary/10 font-medium"
+                          : "border-border text-muted-foreground hover:border-foreground/40"
+                      )}
+                    >
+                      <M.icon className="size-4" /> {M.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* 3. items */}
+          {type === "products" && (
+            <div className="space-y-3 rounded-lg bg-muted/40 p-3">
+              <div className="space-y-1.5">
+                <Label>Which products?</Label>
+                <select
+                  value={productSource}
+                  onChange={(e) =>
+                    setProductSource(e.target.value as Section["productSource"])
+                  }
+                  className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                >
+                  <option value="manual">Hand-pick products</option>
+                  <option value="bestsellers">Auto: bestsellers</option>
+                  <option value="featured">Auto: featured</option>
+                  <option value="category">Auto: all from a category</option>
+                </select>
+              </div>
+              {productSource === "manual" && (
+                <div className="space-y-1.5">
+                  <Label>Pick products</Label>
+                  <ProductMultiSelect
+                    products={products}
+                    selected={productSlugs}
+                    onChange={setProductSlugs}
+                  />
+                </div>
+              )}
+              {productSource === "category" && (
+                <div className="space-y-1.5">
+                  <Label>Category</Label>
+                  <select
+                    value={categorySlug}
+                    onChange={(e) => setCategorySlug(e.target.value)}
+                    className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                  >
+                    <option value="">Select a category…</option>
+                    {categories.map((c) => (
+                      <option key={c.slug} value={c.slug}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
+
+          {type === "categories" && (
+            <div className="space-y-1.5 rounded-lg bg-muted/40 p-3">
+              <Label>Pick categories (leave empty to show all)</Label>
+              <ChipMultiSelect
+                options={categories}
+                selected={categorySlugs}
+                onChange={setCategorySlugs}
+              />
+            </div>
+          )}
+
+          {type && ADVANCED.includes(type) && (
+            <p className="rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground">
+              You can fill in the {TYPE_META[type].label.toLowerCase()} details after adding the
+              section.
+            </p>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={create} disabled={!canCreate}>
+            Add section
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
