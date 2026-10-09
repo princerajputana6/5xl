@@ -317,13 +317,13 @@ export async function HomeSections({ sections }: { sections: HomeSectionDTO[] })
                 {s.type === "products" && products && (
                   <>
                     <ProductRow products={products} />
-                    <ShopAllButton href={productAllHref(s)} label="See all" />
+                    <ShopAllButton href={productAllHref(s)} label="View all" />
                   </>
                 )}
                 {s.type === "cards" && cards && (
                   <>
                     <CardSlider cards={cards} />
-                    {s.viewAllHref && <ShopAllButton href={s.viewAllHref} />}
+                    {s.viewAllHref && <ShopAllButton href={s.viewAllHref} label="View all" />}
                   </>
                 )}
                 {s.type === "categories" && categories && (
