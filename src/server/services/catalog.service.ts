@@ -157,6 +157,11 @@ export async function getProductBySlug(slug: string): Promise<ProductDetailDTO |
     nutritionFacts: (p.nutritionFacts ?? []).map((n) => ({ label: n.label, value: n.value })),
     ingredients: p.ingredients ?? [],
     benefits: p.benefits ?? [],
+    keyBenefits: ((p.keyBenefits as { title?: string; description?: string; images?: string[] }[] | undefined) ?? []).map((k) => ({
+      title: k.title ?? "",
+      description: k.description ?? "",
+      images: (k.images as string[]) ?? [],
+    })),
     usage: p.usage ?? undefined,
     tags: p.tags ?? [],
     goals: p.goals ?? [],
