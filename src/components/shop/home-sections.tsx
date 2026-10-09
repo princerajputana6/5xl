@@ -93,32 +93,14 @@ function SectionHeading({
   );
 }
 
-function ProductRow({
-  products,
-  layout,
-}: {
-  products: ProductCardDTO[];
-  layout: "grid" | "carousel";
-}) {
-  if (layout === "carousel") {
-    return (
-      <div
-        className={cn(
-          "flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3",
-          "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        )}
-      >
-        {products.map((p) => (
-          <div key={p.id} className="w-44 shrink-0 snap-start sm:w-52">
-            <ProductCard product={p} />
-          </div>
-        ))}
-      </div>
-    );
-  }
+/** Homepage product sections show at most 4 items: 2 per row on mobile, 4 on
+ *  desktop. Anything beyond that lives behind the "See all" button. */
+const MAX_HOME_PRODUCTS = 4;
+
+function ProductRow({ products }: { products: ProductCardDTO[] }) {
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-      {products.map((p) => (
+      {products.slice(0, MAX_HOME_PRODUCTS).map((p) => (
         <ProductCard key={p.id} product={p} />
       ))}
     </div>
@@ -334,8 +316,8 @@ export async function HomeSections({ sections }: { sections: HomeSectionDTO[] })
               <Reveal delay={0.05}>
                 {s.type === "products" && products && (
                   <>
-                    <ProductRow products={products} layout={s.layout} />
-                    <ShopAllButton href={productAllHref(s)} />
+                    <ProductRow products={products} />
+                    <ShopAllButton href={productAllHref(s)} label="See all" />
                   </>
                 )}
                 {s.type === "cards" && cards && (
