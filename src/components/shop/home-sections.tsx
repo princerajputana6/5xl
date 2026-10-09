@@ -14,8 +14,32 @@ import { CategoryGrid } from "@/components/shop/category-grid";
 import { VideoSlider, type VideoSlide } from "@/components/shop/video-slider";
 import { TestimonialsSection } from "@/components/shop/testimonials-section";
 import { Reveal } from "@/components/fx/scroll-fx";
+import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/format";
 import { cn } from "@/lib/utils";
+
+/** Where a product section's "shop all" button should point. */
+function productAllHref(s: HomeSectionDTO): string {
+  if (s.viewAllHref) return s.viewAllHref;
+  if (s.productSource === "bestsellers") return "/products?sort=rating";
+  if (s.productSource === "category" && s.categorySlug)
+    return `/products?category=${s.categorySlug}`;
+  return "/products";
+}
+
+/** Centered "shop all" button shown beneath a product/card row. */
+function ShopAllButton({ href, label = "Shop all" }: { href: string; label?: string }) {
+  return (
+    <div className="mt-8 flex justify-center">
+      <Button asChild size="lg" variant="outline" className="group min-w-56">
+        <Link href={href}>
+          {label}
+          <ArrowRight className="ml-1 size-4 transition-transform group-hover:translate-x-1" />
+        </Link>
+      </Button>
+    </div>
+  );
+}
 
 type ResolvedCard = {
   image: string;
@@ -309,9 +333,17 @@ export async function HomeSections({ sections }: { sections: HomeSectionDTO[] })
               </Reveal>
               <Reveal delay={0.05}>
                 {s.type === "products" && products && (
-                  <ProductRow products={products} layout={s.layout} />
+                  <>
+                    <ProductRow products={products} layout={s.layout} />
+                    <ShopAllButton href={productAllHref(s)} />
+                  </>
                 )}
-                {s.type === "cards" && cards && <CardSlider cards={cards} />}
+                {s.type === "cards" && cards && (
+                  <>
+                    <CardSlider cards={cards} />
+                    {s.viewAllHref && <ShopAllButton href={s.viewAllHref} />}
+                  </>
+                )}
                 {s.type === "categories" && categories && (
                   <CategoryGrid categories={categories} />
                 )}
