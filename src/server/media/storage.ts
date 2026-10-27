@@ -21,7 +21,8 @@ const API_SECRET = env.CLOUDINARY_API_SECRET?.trim() || "";
 export const isCloudinary = Boolean(CLOUD_NAME && API_KEY && API_SECRET);
 export const mediaMode: "cloudinary" | "local" = isCloudinary ? "cloudinary" : "local";
 
-export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5MB
+export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5MB (images)
+export const MAX_VIDEO_BYTES = 64 * 1024 * 1024; // 64MB (videos)
 
 const EXT_BY_MIME: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -30,6 +31,17 @@ const EXT_BY_MIME: Record<string, string> = {
   "image/avif": "avif",
   "image/gif": "gif",
 };
+
+const EXT_BY_VIDEO_MIME: Record<string, string> = {
+  "video/mp4": "mp4",
+  "video/webm": "webm",
+  "video/quicktime": "mov",
+  "video/ogg": "ogv",
+};
+
+export function isVideoMime(type: string): boolean {
+  return Boolean(EXT_BY_VIDEO_MIME[type]) || type.startsWith("video/");
+}
 
 export class UploadError extends Error {
   status: number;
@@ -48,19 +60,42 @@ export function assertValidImage(file: { type: string; size: number }) {
   }
 }
 
+export function assertValidVideo(file: { type: string; size: number }) {
+  if (!EXT_BY_VIDEO_MIME[file.type]) {
+    throw new UploadError("Unsupported video type. Use MP4, WebM, MOV or OGG.", 415);
+  }
+  if (file.size > MAX_VIDEO_BYTES) {
+    throw new UploadError("Video is too large (max 64MB).", 413);
+  }
+}
+
 /** Upload a single image and return its public URL. */
 export async function uploadImage(file: File): Promise<{ url: string }> {
   assertValidImage(file);
   const buffer = Buffer.from(await file.arrayBuffer());
-
-  if (isCloudinary) {
-    return uploadToCloudinary(buffer, file.type);
-  }
-  return uploadToLocal(buffer, file.type);
+  if (isCloudinary) return uploadToCloudinary(buffer, file.type, "image");
+  return uploadToLocal(buffer, EXT_BY_MIME[file.type] ?? "bin");
 }
 
-async function uploadToLocal(buffer: Buffer, mime: string): Promise<{ url: string }> {
-  const ext = EXT_BY_MIME[mime] ?? "bin";
+/** Upload a single video and return its public URL. */
+export async function uploadVideo(file: File): Promise<{ url: string }> {
+  assertValidVideo(file);
+  const buffer = Buffer.from(await file.arrayBuffer());
+  if (isCloudinary) return uploadToCloudinary(buffer, file.type, "video");
+  return uploadToLocal(buffer, EXT_BY_VIDEO_MIME[file.type] ?? "bin");
+}
+
+/** Upload any supported media (image or video), branching on the MIME type. */
+export async function uploadMedia(file: File): Promise<{ url: string; kind: "image" | "video" }> {
+  if (isVideoMime(file.type)) {
+    const { url } = await uploadVideo(file);
+    return { url, kind: "video" };
+  }
+  const { url } = await uploadImage(file);
+  return { url, kind: "image" };
+}
+
+async function uploadToLocal(buffer: Buffer, ext: string): Promise<{ url: string }> {
   const name = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}.${ext}`;
   const dir = path.join(process.cwd(), "public", "uploads");
   await mkdir(dir, { recursive: true });
@@ -68,7 +103,11 @@ async function uploadToLocal(buffer: Buffer, mime: string): Promise<{ url: strin
   return { url: `/uploads/${name}` };
 }
 
-async function uploadToCloudinary(buffer: Buffer, mime: string): Promise<{ url: string }> {
+async function uploadToCloudinary(
+  buffer: Buffer,
+  mime: string,
+  resourceType: "image" | "video"
+): Promise<{ url: string }> {
   const timestamp = Math.floor(Date.now() / 1000);
   const folder = "5xl";
 
@@ -87,7 +126,7 @@ async function uploadToCloudinary(buffer: Buffer, mime: string): Promise<{ url: 
   form.append("signature", signature);
 
   const res = await fetch(
-    `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+    `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`,
     { method: "POST", body: form }
   );
   if (!res.ok) {

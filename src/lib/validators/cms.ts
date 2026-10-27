@@ -108,9 +108,24 @@ export const cardItemSchema = z.object({
   href: z.string().trim().optional(),
 });
 
+export const certItemSchema = z.object({
+  image: z.string().trim().optional(),
+  label: z.string().trim().optional(),
+});
+
 export const homeSectionSchema = z.object({
   id: z.string().min(1),
-  type: z.enum(["products", "cards", "categories", "video", "testimonials", "banner", "richtext"]),
+  type: z.enum([
+    "products",
+    "cards",
+    "categories",
+    "video",
+    "videoBanner",
+    "certifications",
+    "testimonials",
+    "banner",
+    "richtext",
+  ]),
   title: z.string().trim().optional(),
   description: z.string().trim().optional(),
   enabled: z.boolean().optional(),
@@ -120,12 +135,15 @@ export const homeSectionSchema = z.object({
   categorySlug: z.string().trim().optional(),
   limit: z.number().int().min(1).max(24).optional(),
   layout: z.enum(["grid", "carousel"]).optional(),
+  mobileColumns: z.number().min(1).max(4).optional(),
   viewAllHref: z.string().trim().optional(),
 
   categorySlugs: z.array(z.string()).optional(),
 
   cards: z.array(cardItemSchema).max(20).optional(),
   videos: z.array(videoItemSchema).max(20).optional(),
+  videoUrl: z.string().trim().optional(),
+  certifications: z.array(certItemSchema).max(12).optional(),
   testimonials: z.array(testimonialItemSchema).max(30).optional(),
 
   image: z.string().trim().optional(),

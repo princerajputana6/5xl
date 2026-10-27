@@ -10,8 +10,8 @@ export const siteConfig = {
   gtmId: process.env.NEXT_PUBLIC_GTM_ID ?? "GTM-MVPTZ5VQ",
   social: {
     instagram: "https://instagram.com/5xl",
-    youtube: "https://youtube.com/@5xl",
-    twitter: "https://twitter.com/5xl",
+    facebook: "https://facebook.com/5xl",
+    x: "https://x.com/5xl",
   },
 } as const;
 

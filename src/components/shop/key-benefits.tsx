@@ -20,7 +20,7 @@ export function KeyBenefits({ benefits }: { benefits: KeyBenefit[] }) {
       <h2 className="mb-6 font-display text-2xl font-extrabold uppercase tracking-tight">
         Key Benefits
       </h2>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {benefits.map((b) => {
           const Icon = ICONS[b.icon];
           return (

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiPermission } from "@/server/api-guard";
-import { uploadImage, UploadError, mediaMode } from "@/server/media/storage";
+import { uploadMedia, UploadError, mediaMode } from "@/server/media/storage";
 
 // Uploads read the raw request body; keep this on the Node runtime.
 export const runtime = "nodejs";
@@ -23,8 +23,8 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { url } = await uploadImage(file);
-    return NextResponse.json({ url, mode: mediaMode });
+    const { url, kind } = await uploadMedia(file);
+    return NextResponse.json({ url, kind, mode: mediaMode });
   } catch (err) {
     if (err instanceof UploadError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
