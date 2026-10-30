@@ -9,15 +9,27 @@ import { formatINR, discountPct } from "@/lib/format";
 import { ProductImage } from "./product-image";
 
 /**
- * Teen-patti-style fanned "hand" of featured products for the hero's right
- * side: cards are dealt in an arc with rotation, and the hand auto-shuffles so
- * each product takes a turn at the front. Honors reduced motion (static fan).
+ * Teen-patti-style fanned "hand" of featured products: cards are dealt in an
+ * arc with rotation, and the hand auto-shuffles so each product takes a turn at
+ * the front. Shown on every breakpoint — the arc offsets and card size scale
+ * down on phones so the same fan fits a mobile screen. Honors reduced motion.
  */
 export function HeroCardFan({ products }: { products: ProductCardDTO[] }) {
   const reduce = useReducedMotion();
   const cards = products.slice(0, 3);
   const n = cards.length;
   const [offset, setOffset] = React.useState(0);
+  const [mobile, setMobile] = React.useState(false);
+
+  // Scale the fan geometry down on phones (set after mount to avoid a
+  // hydration mismatch; the spring smooths the one-time adjustment).
+  React.useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const onChange = () => setMobile(mq.matches);
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   React.useEffect(() => {
     if (reduce || n < 2) return;
@@ -28,10 +40,13 @@ export function HeroCardFan({ products }: { products: ProductCardDTO[] }) {
   if (n === 0) return null;
 
   const center = (n - 1) / 2;
+  const xStep = mobile ? 58 : 132;
+  const rotStep = mobile ? 8 : reduce ? 9 : 11;
+  const yStep = mobile ? 16 : 26;
 
   return (
     <div
-      className="relative mx-auto hidden aspect-square w-full max-w-xl md:block"
+      className="relative mx-auto block aspect-square w-full max-w-[22rem] md:max-w-xl"
       style={{ perspective: "1600px" }}
       aria-label="Featured products"
     >
@@ -61,9 +76,9 @@ export function HeroCardFan({ products }: { products: ProductCardDTO[] }) {
               className="absolute"
               initial={false}
               animate={{
-                rotate: reduce ? d * 9 : d * 11,
-                x: d * 132,
-                y: Math.abs(d) * 26,
+                rotate: d * rotStep,
+                x: d * xStep,
+                y: Math.abs(d) * yStep,
                 scale: 1 - Math.abs(d) * 0.08,
               }}
               transition={{ type: "spring", stiffness: 120, damping: 18 }}
@@ -71,15 +86,15 @@ export function HeroCardFan({ products }: { products: ProductCardDTO[] }) {
             >
               <Link
                 href={`/products/${p.slug}`}
-                className="group relative block w-[30rem] overflow-hidden rounded-3xl border border-white/70 bg-white text-neutral-900 shadow-2xl ring-1 ring-black/5"
+                className="group relative block w-60 overflow-hidden rounded-2xl border border-white/70 bg-white text-neutral-900 shadow-2xl ring-1 ring-black/5 md:w-[30rem] md:rounded-3xl"
                 data-cursor="grow"
               >
                 {/* corner pip like a playing card */}
-                <div className="pointer-events-none absolute left-4 top-4 z-10 flex size-12 items-center justify-center rounded-full bg-primary text-neutral-900 shadow-lg">
-                  <Dumbbell className="size-6" />
+                <div className="pointer-events-none absolute left-3 top-3 z-10 flex size-9 items-center justify-center rounded-full bg-primary text-neutral-900 shadow-lg md:left-4 md:top-4 md:size-12">
+                  <Dumbbell className="size-5 md:size-6" />
                 </div>
                 {pct > 0 && (
-                  <div className="pointer-events-none absolute right-4 top-4 z-10 rounded-full bg-neutral-900 px-3.5 py-1.5 text-sm font-bold text-white">
+                  <div className="pointer-events-none absolute right-3 top-3 z-10 rounded-full bg-neutral-900 px-2.5 py-1 text-xs font-bold text-white md:right-4 md:top-4 md:px-3.5 md:py-1.5 md:text-sm">
                     {pct}% OFF
                   </div>
                 )}
@@ -89,33 +104,33 @@ export function HeroCardFan({ products }: { products: ProductCardDTO[] }) {
                     src={p.image}
                     alt={p.name}
                     fill
-                    sizes="480px"
+                    sizes="(max-width: 767px) 240px, 480px"
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                 </div>
 
-                <div className="p-5">
+                <div className="p-4 md:p-5">
                   {p.brandName && (
-                    <p className="text-sm font-semibold uppercase tracking-widest text-neutral-500">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-neutral-500 md:text-sm">
                       {p.brandName}
                     </p>
                   )}
-                  <p className="mt-1 line-clamp-1 font-display text-2xl font-bold uppercase leading-tight">
+                  <p className="mt-1 line-clamp-1 font-display text-lg font-bold uppercase leading-tight md:text-2xl">
                     {p.name}
                   </p>
-                  <div className="mt-3 flex items-center justify-between">
-                    <div className="flex items-baseline gap-2.5">
-                      <span className="font-display text-3xl font-extrabold">
+                  <div className="mt-2 flex items-center justify-between md:mt-3">
+                    <div className="flex items-baseline gap-2 md:gap-2.5">
+                      <span className="font-display text-xl font-extrabold md:text-3xl">
                         {formatINR(p.price)}
                       </span>
                       {p.mrp > p.price && (
-                        <span className="text-lg text-neutral-400 line-through">
+                        <span className="text-sm text-neutral-400 line-through md:text-lg">
                           {formatINR(p.mrp)}
                         </span>
                       )}
                     </div>
-                    <span className="flex items-center gap-1 text-lg font-semibold text-neutral-700">
-                      <Star className="size-5 fill-primary text-primary" />
+                    <span className="flex items-center gap-1 text-sm font-semibold text-neutral-700 md:text-lg">
+                      <Star className="size-4 fill-primary text-primary md:size-5" />
                       {p.rating.toFixed(1)}
                     </span>
                   </div>
@@ -124,7 +139,7 @@ export function HeroCardFan({ products }: { products: ProductCardDTO[] }) {
                 {/* Fade veil for the side cards (kept opaque so overlaps never
                     bleed; the veil just washes them out). */}
                 <div
-                  className="pointer-events-none absolute inset-0 rounded-3xl bg-white transition-opacity duration-500"
+                  className="pointer-events-none absolute inset-0 rounded-2xl bg-white transition-opacity duration-500 md:rounded-3xl"
                   style={{ opacity: Math.abs(d) * 0.4 }}
                 />
               </Link>
