@@ -73,12 +73,31 @@ const CardItemSchema = new Schema(
   { _id: false }
 );
 
+/** A single certification / trust badge (uploaded logo + label). */
+const CertItemSchema = new Schema(
+  {
+    image: String, // badge logo
+    label: String, // e.g. "ISO 22000:2018"
+  },
+  { _id: false }
+);
+
 const HomeSectionSchema = new Schema(
   {
     id: { type: String, required: true },
     type: {
       type: String,
-      enum: ["products", "cards", "categories", "video", "testimonials", "banner", "richtext"],
+      enum: [
+        "products",
+        "cards",
+        "categories",
+        "video",
+        "videoBanner",
+        "certifications",
+        "testimonials",
+        "banner",
+        "richtext",
+      ],
       required: true,
     },
     title: String,
@@ -95,6 +114,8 @@ const HomeSectionSchema = new Schema(
     categorySlug: String, // products-from-category source
     limit: { type: Number, default: 8 },
     layout: { type: String, enum: ["grid", "carousel"], default: "grid" },
+    /** How many cards peek into view on mobile (supports halves like 1.5). */
+    mobileColumns: { type: Number, default: 2 },
     viewAllHref: String,
 
     // categories
@@ -105,6 +126,12 @@ const HomeSectionSchema = new Schema(
 
     // video slider
     videos: { type: [VideoItemSchema], default: [] },
+
+    // single video banner (wide hero clip with CTA)
+    videoUrl: String,
+
+    // certifications band
+    certifications: { type: [CertItemSchema], default: [] },
 
     // testimonials
     testimonials: { type: [TestimonialItemSchema], default: [] },

@@ -27,7 +27,20 @@ function youTubeId(url: string): string | null {
  * (self-hosted mp4/webm or a YouTube link) and can surface an assigned product
  * beneath it. Scrolls via snap + arrow buttons; keyboard and touch friendly.
  */
-export function VideoSlider({ slides }: { slides: VideoSlide[] }) {
+/** Mobile card width so exactly `cols` cards (halves allowed) fit the viewport. */
+function slotVar(cols: number): React.CSSProperties {
+  const n = Math.min(3, Math.max(1, cols || 1.2));
+  const basis = `calc(${(100 / n).toFixed(4)}% - ${((1 * (n - 1)) / n).toFixed(4)}rem)`;
+  return { "--slot": basis } as React.CSSProperties;
+}
+
+export function VideoSlider({
+  slides,
+  mobileColumns = 1.2,
+}: {
+  slides: VideoSlide[];
+  mobileColumns?: number;
+}) {
   const trackRef = React.useRef<HTMLDivElement>(null);
 
   function scrollByCard(dir: -1 | 1) {
@@ -55,7 +68,8 @@ export function VideoSlider({ slides }: { slides: VideoSlide[] }) {
             <div
               key={i}
               data-slide
-              className="w-[78%] shrink-0 snap-start sm:w-[46%] lg:w-[31%]"
+              style={slotVar(mobileColumns)}
+              className="w-[var(--slot)] shrink-0 snap-start sm:w-[46%] lg:w-[23%]"
             >
               <div className="relative aspect-[9/13] overflow-hidden rounded-2xl bg-neutral-900 ring-1 ring-black/5">
                 {yt ? (

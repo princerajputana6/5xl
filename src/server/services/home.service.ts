@@ -12,9 +12,20 @@ export type CardItemDTO = {
   href: string;
 };
 
+export type CertItemDTO = { image: string; label: string };
+
 export type HomeSectionDTO = {
   id: string;
-  type: "products" | "cards" | "categories" | "video" | "testimonials" | "banner" | "richtext";
+  type:
+    | "products"
+    | "cards"
+    | "categories"
+    | "video"
+    | "videoBanner"
+    | "certifications"
+    | "testimonials"
+    | "banner"
+    | "richtext";
   title: string;
   description: string;
   enabled: boolean;
@@ -23,10 +34,13 @@ export type HomeSectionDTO = {
   categorySlug: string;
   limit: number;
   layout: "grid" | "carousel";
+  mobileColumns: number;
   viewAllHref: string;
   categorySlugs: string[];
   cards: CardItemDTO[];
   videos: { url: string; poster: string; caption: string; productSlug: string }[];
+  videoUrl: string;
+  certifications: CertItemDTO[];
   testimonials: {
     author: string;
     role: string;
@@ -87,6 +101,7 @@ function toSectionDTO(s: Record<string, unknown>): HomeSectionDTO {
     categorySlug: (s.categorySlug as string) ?? "",
     limit: typeof s.limit === "number" ? (s.limit as number) : 8,
     layout: (s.layout as HomeSectionDTO["layout"]) ?? "grid",
+    mobileColumns: typeof s.mobileColumns === "number" ? (s.mobileColumns as number) : 2,
     viewAllHref: (s.viewAllHref as string) ?? "",
     categorySlugs: (s.categorySlugs as string[]) ?? [],
     cards: ((s.cards as Record<string, unknown>[]) ?? []).map((c) => ({
@@ -103,6 +118,11 @@ function toSectionDTO(s: Record<string, unknown>): HomeSectionDTO {
       poster: (v.poster as string) ?? "",
       caption: (v.caption as string) ?? "",
       productSlug: (v.productSlug as string) ?? "",
+    })),
+    videoUrl: (s.videoUrl as string) ?? "",
+    certifications: ((s.certifications as Record<string, unknown>[]) ?? []).map((c) => ({
+      image: (c.image as string) ?? "",
+      label: (c.label as string) ?? "",
     })),
     testimonials: ((s.testimonials as Record<string, unknown>[]) ?? []).map((t) => ({
       author: (t.author as string) ?? "",

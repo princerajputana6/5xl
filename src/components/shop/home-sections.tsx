@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import type { CSSProperties } from "react";
+import { ArrowRight, Play } from "lucide-react";
 import type { HomeSectionDTO } from "@/server/services/home.service";
 import type { ProductCardDTO } from "@/types/catalog";
 import {
@@ -93,27 +94,70 @@ function SectionHeading({
   );
 }
 
-/** Homepage product sections show at most 4 items: 2 per row on mobile, 4 on
- *  desktop. Anything beyond that lives behind the "See all" button. */
-const MAX_HOME_PRODUCTS = 4;
+/** Grid layout shows at most 4 items (the rest live behind "View all"); a
+ *  slider shows everything the admin configured. */
+const MAX_GRID_PRODUCTS = 4;
+const SLIDER_GAP_REM = 1; // matches gap-4
 
-function ProductRow({ products }: { products: ProductCardDTO[] }) {
+/** Whole-number mobile column class for grid layouts. */
+const MOBILE_GRID_COLS: Record<number, string> = {
+  1: "grid-cols-1",
+  2: "grid-cols-2",
+  3: "grid-cols-3",
+};
+
+/** Mobile card width so exactly `cols` cards (halves allowed) fit the viewport.
+ *  Tailwind's `sm:`/`lg:` widths override this var at ≥640px. */
+function mobileSlotVar(cols: number): CSSProperties {
+  const n = Math.min(3, Math.max(1, cols || 2));
+  const basis = `calc(${(100 / n).toFixed(4)}% - ${((SLIDER_GAP_REM * (n - 1)) / n).toFixed(4)}rem)`;
+  return { "--slot": basis } as CSSProperties;
+}
+
+function ProductRow({ products, section }: { products: ProductCardDTO[]; section: HomeSectionDTO }) {
+  if (section.layout === "carousel") {
+    return (
+      <div
+        className={cn(
+          "flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3",
+          "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        )}
+      >
+        {products.map((p) => (
+          <div
+            key={p.id}
+            style={mobileSlotVar(section.mobileColumns)}
+            className="w-[var(--slot)] shrink-0 snap-start sm:w-52 lg:w-56"
+          >
+            <ProductCard product={p} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+  const cols = MOBILE_GRID_COLS[Math.round(section.mobileColumns) || 2] ?? "grid-cols-2";
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-      {products.slice(0, MAX_HOME_PRODUCTS).map((p) => (
+    <div className={cn("grid gap-4 lg:grid-cols-4", cols)}>
+      {products.slice(0, MAX_GRID_PRODUCTS).map((p) => (
         <ProductCard key={p.id} product={p} />
       ))}
     </div>
   );
 }
 
-/** Horizontal slider of promo cards, each optionally tied to a product. */
-function CardSlider({ cards }: { cards: ResolvedCard[] }) {
+/** Slider / grid of promo cards, each optionally tied to a product. */
+function CardSlider({ cards, section }: { cards: ResolvedCard[]; section: HomeSectionDTO }) {
+  const asGrid = section.layout === "grid";
+  const gridCols = MOBILE_GRID_COLS[Math.round(section.mobileColumns) || 2] ?? "grid-cols-2";
   return (
     <div
       className={cn(
-        "flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3",
-        "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        asGrid
+          ? cn("grid gap-4 lg:grid-cols-4", gridCols)
+          : cn(
+              "flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3",
+              "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            )
       )}
     >
       {cards.map((c, i) => {
@@ -165,18 +209,123 @@ function CardSlider({ cards }: { cards: ResolvedCard[] }) {
             </div>
           </>
         );
-        const cls =
-          "group flex w-56 shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 sm:w-64";
+        const cls = cn(
+          "group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5",
+          asGrid ? "w-full" : "w-[var(--slot)] shrink-0 snap-start sm:w-56 lg:w-64"
+        );
+        const style = asGrid ? undefined : mobileSlotVar(section.mobileColumns);
         return c.href ? (
-          <Link key={i} href={c.href} className={cls}>
+          <Link key={i} href={c.href} className={cls} style={style}>
             {inner}
           </Link>
         ) : (
-          <div key={i} className={cls}>
+          <div key={i} className={cls} style={style}>
             {inner}
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/** Certifications band (bright brand panel + bordered row of trust badges). */
+function CertBand({ section }: { section: HomeSectionDTO }) {
+  const items = section.certifications.filter((c) => c.image || c.label);
+  const [head, ...tailWords] = (section.title || "Quality that stands apart").split(" ");
+  const tail = tailWords.join(" ");
+  return (
+    <div className="bg-primary py-10 text-neutral-950 md:py-14">
+      <div className="container-5xl">
+        <h2 className="text-center font-display text-3xl font-extrabold uppercase leading-[0.95] tracking-tight md:text-5xl">
+          {head}{" "}
+          {tail && (
+            <span className="mt-2 inline-block -skew-x-6 bg-neutral-950 px-3 py-0.5 text-primary">
+              {tail}
+            </span>
+          )}
+        </h2>
+        {section.description && (
+          <p className="mx-auto mt-3 max-w-xl text-center text-sm font-medium text-neutral-950/70 md:text-base">
+            {section.description}
+          </p>
+        )}
+        <div className="mt-8 overflow-hidden rounded-2xl border-2 border-neutral-950/80">
+          <ul
+            className={cn(
+              "flex items-stretch divide-x-2 divide-neutral-950/15 overflow-x-auto",
+              "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            )}
+          >
+            {items.map((c, i) => (
+              <li
+                key={i}
+                className="flex min-w-[33.333%] flex-1 items-center justify-center p-5 sm:min-w-0 md:p-7"
+              >
+                {c.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={c.image}
+                    alt={c.label || "Certification"}
+                    loading="lazy"
+                    className="h-14 w-auto object-contain md:h-16"
+                  />
+                ) : (
+                  <span className="grid size-16 place-items-center rounded-full border-2 border-neutral-950 px-1 text-center font-display text-[0.6rem] font-bold uppercase leading-tight md:size-20 md:text-xs">
+                    {c.label}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Wide hero video banner with headline + CTA (admin-uploaded clip). */
+function VideoBanner({ section }: { section: HomeSectionDTO }) {
+  return (
+    <div className="container-5xl py-7 md:py-10">
+      <div className="relative aspect-[16/10] overflow-hidden rounded-3xl bg-neutral-950 sm:aspect-[21/9]">
+        {section.videoUrl ? (
+          <video
+            className="absolute inset-0 size-full object-cover"
+            src={section.videoUrl}
+            poster={section.image || undefined}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+          />
+        ) : section.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={section.image} alt={section.title || "Video"} className="absolute inset-0 size-full object-cover" />
+        ) : null}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/40 to-black/60" />
+        <div className="absolute inset-0 flex flex-col items-start justify-center gap-3 p-6 text-white md:p-12">
+          {section.description && (
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/75 md:text-sm">
+              {section.description}
+            </p>
+          )}
+          {section.title && (
+            <h2 className="max-w-xl font-display text-3xl font-extrabold uppercase leading-[0.95] tracking-tight md:text-5xl">
+              {section.title}
+            </h2>
+          )}
+          {section.ctaLabel && (
+            <Link
+              href={section.ctaHref || "#"}
+              className="mt-1 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-neutral-950 transition-transform hover:-translate-y-0.5"
+            >
+              <Play className="size-4 fill-neutral-950" />
+              {section.ctaLabel}
+            </Link>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -261,7 +410,18 @@ export async function HomeSections({ sections }: { sections: HomeSectionDTO[] })
         if (s.type === "video" && (!videos || videos.length === 0)) return null;
         if (s.type === "testimonials" && s.testimonials.length === 0) return null;
         if (s.type === "banner" && !s.image && !s.title) return null;
+        if (s.type === "videoBanner" && !s.videoUrl && !s.image) return null;
+        if (
+          s.type === "certifications" &&
+          s.certifications.filter((c) => c.image || c.label).length === 0
+        )
+          return null;
         if (s.type === "richtext" && !s.html) return null;
+
+        // Certifications render as their own full-bleed brand band.
+        if (s.type === "certifications") return <CertBand key={s.id} section={s} />;
+        // Video banner is edge-to-edge with its own overlay.
+        if (s.type === "videoBanner") return <VideoBanner key={s.id} section={s} />;
 
         const alt = idx % 2 === 1;
 
@@ -316,20 +476,22 @@ export async function HomeSections({ sections }: { sections: HomeSectionDTO[] })
               <Reveal delay={0.05}>
                 {s.type === "products" && products && (
                   <>
-                    <ProductRow products={products} />
+                    <ProductRow products={products} section={s} />
                     <ShopAllButton href={productAllHref(s)} label="View all" />
                   </>
                 )}
                 {s.type === "cards" && cards && (
                   <>
-                    <CardSlider cards={cards} />
+                    <CardSlider cards={cards} section={s} />
                     {s.viewAllHref && <ShopAllButton href={s.viewAllHref} label="View all" />}
                   </>
                 )}
                 {s.type === "categories" && categories && (
                   <CategoryGrid categories={categories} />
                 )}
-                {s.type === "video" && videos && <VideoSlider slides={videos} />}
+                {s.type === "video" && videos && (
+                  <VideoSlider slides={videos} mobileColumns={s.mobileColumns} />
+                )}
                 {s.type === "testimonials" && (
                   <TestimonialsSection items={s.testimonials} />
                 )}

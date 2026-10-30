@@ -14,6 +14,8 @@ import {
   Image as ImageIcon,
   FileText,
   GalleryHorizontal,
+  MonitorPlay,
+  BadgeCheck,
 } from "lucide-react";
 import type { HomeSectionDTO } from "@/server/services/home.service";
 import { Button } from "@/components/ui/button";
@@ -21,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ImageUploader } from "@/components/admin/image-uploader";
+import { VideoUploader } from "@/components/admin/video-uploader";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +45,8 @@ const TYPE_META: Record<
   cards: { label: "Card slider", icon: GalleryHorizontal },
   categories: { label: "Categories", icon: LayoutGrid },
   video: { label: "Video slider", icon: Video },
+  videoBanner: { label: "Video banner", icon: MonitorPlay },
+  certifications: { label: "Certifications", icon: BadgeCheck },
   testimonials: { label: "Testimonials", icon: Quote },
   banner: { label: "Banner", icon: ImageIcon },
   richtext: { label: "Rich text", icon: FileText },
@@ -67,16 +72,63 @@ export function emptySection(type: Section["type"]): Section {
     categorySlug: "",
     limit: 8,
     layout: "grid",
+    mobileColumns: 2,
     viewAllHref: "",
     categorySlugs: [],
     cards: [],
     videos: [],
+    videoUrl: "",
+    certifications: [],
     testimonials: [],
     image: "",
     ctaLabel: "",
     ctaHref: "",
     html: "",
   };
+}
+
+/** Admin-facing layout + mobile-columns controls shared by product/card/video
+ *  sections. `withLayout` hides the grid/slider toggle for always-slider rows. */
+function LayoutControls({
+  section,
+  onChange,
+  withLayout = true,
+}: {
+  section: Section;
+  onChange: (patch: Partial<Section>) => void;
+  withLayout?: boolean;
+}) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      {withLayout && (
+        <div className="space-y-1.5">
+          <Label>Layout</Label>
+          <select
+            value={section.layout}
+            onChange={(e) => onChange({ layout: e.target.value as Section["layout"] })}
+            className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+          >
+            <option value="grid">Grid</option>
+            <option value="carousel">Slider</option>
+          </select>
+        </div>
+      )}
+      <div className="space-y-1.5">
+        <Label>Cards per row on mobile</Label>
+        <select
+          value={String(section.mobileColumns)}
+          onChange={(e) => onChange({ mobileColumns: Number(e.target.value) })}
+          className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+        >
+          <option value="1">1</option>
+          <option value="1.5">1.5 (peek)</option>
+          <option value="2">2</option>
+          <option value="2.5">2.5 (peek)</option>
+          <option value="3">3</option>
+        </select>
+      </div>
+    </div>
+  );
 }
 
 /* ------------------------- small sub-editors ------------------------- */
@@ -202,6 +254,14 @@ export function HomeSectionsEditor({
   products: Picker[];
 }) {
   const [dragIndex, setDragIndex] = React.useState<number | null>(null);
+  const [openIds, setOpenIds] = React.useState<Set<string>>(new Set());
+  const toggleOpen = (id: string) =>
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const update = (i: number, patch: Partial<Section>) =>
     onChange(value.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
@@ -225,6 +285,7 @@ export function HomeSectionsEditor({
     <div className="space-y-4">
       {value.map((s, i) => {
         const Meta = TYPE_META[s.type];
+        const open = openIds.has(s.id);
         return (
           <div
             key={s.id}
@@ -241,15 +302,27 @@ export function HomeSectionsEditor({
               !s.enabled && "opacity-60"
             )}
           >
-            {/* header */}
-            <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+            {/* header — click the name to expand/collapse */}
+            <div className="flex items-center gap-2 px-3 py-2">
               <span className="cursor-grab text-muted-foreground active:cursor-grabbing" title="Drag to reorder">
                 <GripVertical className="size-4" />
               </span>
-              <Meta.icon className="size-4 text-primary" />
-              <span className="text-sm font-semibold">{Meta.label}</span>
-              {s.title && <span className="truncate text-sm text-muted-foreground">· {s.title}</span>}
-              <div className="ml-auto flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => toggleOpen(s.id)}
+                aria-expanded={open}
+                className="flex min-w-0 flex-1 items-center gap-2 rounded-md py-1 text-left hover:text-primary"
+              >
+                <ChevronDown
+                  className={cn("size-4 shrink-0 transition-transform", open ? "" : "-rotate-90")}
+                />
+                <Meta.icon className="size-4 shrink-0 text-primary" />
+                <span className="shrink-0 text-sm font-semibold">{s.title || Meta.label}</span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {s.title ? `· ${Meta.label}` : "· untitled"}
+                </span>
+              </button>
+              <div className="flex shrink-0 items-center gap-1">
                 <label className="mr-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Checkbox
                     checked={s.enabled}
@@ -282,7 +355,8 @@ export function HomeSectionsEditor({
             </div>
 
             {/* body */}
-            <div className="space-y-3 p-4">
+            {open && (
+            <div className="space-y-3 border-t border-border p-4">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label>Section title</Label>
@@ -313,7 +387,7 @@ export function HomeSectionsEditor({
 
               {s.type === "products" && (
                 <div className="space-y-3 rounded-lg bg-muted/40 p-3">
-                  <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <Label>Source</Label>
                       <select
@@ -330,7 +404,7 @@ export function HomeSectionsEditor({
                       </select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Max items</Label>
+                      <Label>Max items (slider)</Label>
                       <Input
                         type="number"
                         min={1}
@@ -339,18 +413,11 @@ export function HomeSectionsEditor({
                         onChange={(e) => update(i, { limit: Number(e.target.value) || 8 })}
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <Label>Layout</Label>
-                      <select
-                        value={s.layout}
-                        onChange={(e) => update(i, { layout: e.target.value as Section["layout"] })}
-                        className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-                      >
-                        <option value="grid">Grid</option>
-                        <option value="carousel">Carousel</option>
-                      </select>
-                    </div>
                   </div>
+                  <LayoutControls section={s} onChange={(patch) => update(i, patch)} />
+                  <p className="text-xs text-muted-foreground">
+                    Grid shows up to 4 items with a “View all” button; slider scrolls through all of them.
+                  </p>
 
                   {s.productSource === "manual" && (
                     <div className="space-y-1.5">
@@ -383,11 +450,16 @@ export function HomeSectionsEditor({
               )}
 
               {s.type === "cards" && (
-                <CardEditor
-                  cards={s.cards}
-                  products={products}
-                  onChange={(cards) => update(i, { cards })}
-                />
+                <div className="space-y-3">
+                  <div className="rounded-lg bg-muted/40 p-3">
+                    <LayoutControls section={s} onChange={(patch) => update(i, patch)} />
+                  </div>
+                  <CardEditor
+                    cards={s.cards}
+                    products={products}
+                    onChange={(cards) => update(i, { cards })}
+                  />
+                </div>
               )}
 
               {s.type === "categories" && (
@@ -402,10 +474,64 @@ export function HomeSectionsEditor({
               )}
 
               {s.type === "video" && (
-                <VideoEditor
-                  videos={s.videos}
-                  products={products}
-                  onChange={(videos) => update(i, { videos })}
+                <div className="space-y-3">
+                  <div className="rounded-lg bg-muted/40 p-3">
+                    <LayoutControls
+                      section={s}
+                      onChange={(patch) => update(i, patch)}
+                      withLayout={false}
+                    />
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Vertical video cards — a slider on desktop (4 across), swipeable on mobile.
+                    </p>
+                  </div>
+                  <VideoEditor
+                    videos={s.videos}
+                    products={products}
+                    onChange={(videos) => update(i, { videos })}
+                  />
+                </div>
+              )}
+
+              {s.type === "videoBanner" && (
+                <div className="grid gap-3 rounded-lg bg-muted/40 p-3 sm:grid-cols-2">
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label>Banner video</Label>
+                    <VideoUploader
+                      value={s.videoUrl}
+                      onChange={(url) => update(i, { videoUrl: url })}
+                    />
+                  </div>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label>Poster image (shown before the video loads)</Label>
+                    <ImageUploader
+                      value={s.image ? [s.image] : []}
+                      onChange={(next) => update(i, { image: next[0] ?? "" })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Headline</Label>
+                    <Input value={s.title} onChange={(e) => update(i, { title: e.target.value })} placeholder="Stronger every day" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Eyebrow (small line above)</Label>
+                    <Input value={s.description} onChange={(e) => update(i, { description: e.target.value })} placeholder="Real people. Real results." />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Button label</Label>
+                    <Input value={s.ctaLabel} onChange={(e) => update(i, { ctaLabel: e.target.value })} placeholder="Watch now" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Button link</Label>
+                    <Input value={s.ctaHref} onChange={(e) => update(i, { ctaHref: e.target.value })} placeholder="/products" className="font-mono" />
+                  </div>
+                </div>
+              )}
+
+              {s.type === "certifications" && (
+                <CertificationsEditor
+                  items={s.certifications}
+                  onChange={(certifications) => update(i, { certifications })}
                 />
               )}
 
@@ -453,6 +579,7 @@ export function HomeSectionsEditor({
                 </div>
               )}
             </div>
+            )}
           </div>
         );
       })}
@@ -468,7 +595,10 @@ export function HomeSectionsEditor({
       <AddSectionDialog
         categories={categories}
         products={products}
-        onCreate={(section) => onChange([...value, section])}
+        onCreate={(section) => {
+          onChange([...value, section]);
+          setOpenIds((p) => new Set(p).add(section.id)); // expand the new one
+        }}
       />
     </div>
   );
@@ -547,7 +677,15 @@ function AddSectionDialog({
       icon: LayoutGrid,
     },
   ];
-  const ADVANCED: Section["type"][] = ["cards", "video", "testimonials", "banner", "richtext"];
+  const ADVANCED: Section["type"][] = [
+    "cards",
+    "video",
+    "videoBanner",
+    "certifications",
+    "testimonials",
+    "banner",
+    "richtext",
+  ];
 
   return (
     <Dialog
@@ -624,7 +762,7 @@ function AddSectionDialog({
               onClick={() => setShowAdvanced((v) => !v)}
               className="text-xs font-medium text-muted-foreground underline-offset-2 hover:underline"
             >
-              {showAdvanced ? "Hide" : "More"} section types (card slider, video, testimonials, banner, rich text)
+              {showAdvanced ? "Hide" : "More"} section types (card slider, video slider, video banner, certifications, testimonials, banner, rich text)
             </button>
             {showAdvanced && (
               <div className="flex flex-wrap gap-2">
@@ -862,8 +1000,8 @@ function VideoEditor({
             </Button>
           </div>
           <div className="space-y-1.5 sm:col-span-2">
-            <Label>Video URL (mp4/webm or YouTube)</Label>
-            <Input value={v.url} onChange={(e) => upd(i, { url: e.target.value })} className="font-mono" />
+            <Label>Video (upload or paste a URL / YouTube link)</Label>
+            <VideoUploader value={v.url} onChange={(url) => upd(i, { url })} />
           </div>
           <div className="space-y-1.5">
             <Label>Caption</Label>
@@ -899,6 +1037,66 @@ function VideoEditor({
         onClick={() => onChange([...videos, { url: "", poster: "", caption: "", productSlug: "" }])}
       >
         <Plus className="mr-1 size-4" /> Add video
+      </Button>
+    </div>
+  );
+}
+
+/* --------------------------- certifications editor --------------------------- */
+
+function CertificationsEditor({
+  items,
+  onChange,
+}: {
+  items: Section["certifications"];
+  onChange: (v: Section["certifications"]) => void;
+}) {
+  const upd = (i: number, patch: Partial<Section["certifications"][number]>) =>
+    onChange(items.map((c, idx) => (idx === i ? { ...c, ...patch } : c)));
+  return (
+    <div className="space-y-3 rounded-lg bg-muted/40 p-3">
+      <p className="text-xs text-muted-foreground">
+        Upload each certification logo (ISO, FDA, HACCP, GMP, FSSAI…). The label is used as a
+        fallback when no logo is uploaded, and for accessibility.
+      </p>
+      {items.map((c, i) => (
+        <div key={i} className="grid gap-3 rounded-lg border border-border bg-card p-3 sm:grid-cols-[auto_1fr_auto]">
+          <div className="space-y-1.5">
+            <Label>Logo</Label>
+            <div className="w-40">
+              <ImageUploader
+                value={c.image ? [c.image] : []}
+                onChange={(next) => upd(i, { image: next[0] ?? "" })}
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Label</Label>
+            <Input
+              value={c.label}
+              onChange={(e) => upd(i, { label: e.target.value })}
+              placeholder="ISO 22000:2018"
+            />
+          </div>
+          <div className="flex items-start pt-6">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-destructive hover:text-destructive"
+              onClick={() => onChange(items.filter((_, idx) => idx !== i))}
+              aria-label="Remove certification"
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </div>
+        </div>
+      ))}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onChange([...items, { image: "", label: "" }])}
+      >
+        <Plus className="mr-1 size-4" /> Add certification
       </Button>
     </div>
   );
