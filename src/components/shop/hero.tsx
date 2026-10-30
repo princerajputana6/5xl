@@ -7,6 +7,7 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HeroParticles } from "@/components/shop/hero-particles";
 import { HeroCardFan } from "@/components/shop/hero-card-fan";
+import { HeroCardsMobile } from "@/components/shop/hero-cards-mobile";
 import { iconByName } from "@/lib/icon-map";
 import type { ProductCardDTO } from "@/types/catalog";
 
@@ -178,7 +179,7 @@ export function Hero({
               "Lab-tested whey, creatine and mass gainers engineered for serious athletes. Authentic supplements, delivered fast across India."}
           </motion.p>
 
-          <motion.div variants={item} className="flex flex-wrap gap-3">
+          <motion.div variants={item} className="hidden flex-wrap gap-3 md:flex">
             <Button
               asChild
               size="lg"
@@ -203,11 +204,16 @@ export function Hero({
             )}
           </motion.div>
 
-          {/* Stat row */}
+          {/* Mobile-only featured cards (replace the stats + CTAs on phones) */}
+          <motion.div variants={item} className="w-full md:hidden">
+            <HeroCardsMobile products={products} />
+          </motion.div>
+
+          {/* Stat row (desktop only) */}
           {stats.length > 0 && (
             <motion.dl
               variants={item}
-              className="mt-6 grid w-full max-w-xl grid-cols-2 gap-x-6 gap-y-5 border-t border-white/15 pt-6 sm:grid-cols-4"
+              className="mt-6 hidden w-full max-w-xl grid-cols-2 gap-x-6 gap-y-5 border-t border-white/15 pt-6 sm:grid-cols-4 md:grid"
             >
               {stats.map((s, i) => {
                 const Icon = iconByName(s.icon);
