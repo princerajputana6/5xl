@@ -7,7 +7,6 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HeroParticles } from "@/components/shop/hero-particles";
 import { HeroCardFan } from "@/components/shop/hero-card-fan";
-import { HeroCardsMobile } from "@/components/shop/hero-cards-mobile";
 import { iconByName } from "@/lib/icon-map";
 import type { ProductCardDTO } from "@/types/catalog";
 
@@ -202,11 +201,6 @@ export function Hero({
                 </Link>
               </Button>
             )}
-          </motion.div>
-
-          {/* Mobile-only featured cards (replace the stats + CTAs on phones) */}
-          <motion.div variants={item} className="w-full md:hidden">
-            <HeroCardsMobile products={products} />
           </motion.div>
 
           {/* Stat row (desktop only) */}
