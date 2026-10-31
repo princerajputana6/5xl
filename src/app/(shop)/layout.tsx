@@ -2,6 +2,7 @@ import { AnnouncementBar } from "@/components/shop/announcement-bar";
 import { Navbar } from "@/components/shop/navbar";
 import { Footer } from "@/components/shop/footer";
 import { MobileBottomNav } from "@/components/shop/mobile-bottom-nav";
+import { CookieConsent } from "@/components/shop/cookie-consent";
 
 export default function ShopLayout({
   children,
@@ -16,6 +17,7 @@ export default function ShopLayout({
       <main className="flex-1 pb-16 lg:pb-0">{children}</main>
       <Footer />
       <MobileBottomNav />
+      <CookieConsent />
     </div>
   );
 }
