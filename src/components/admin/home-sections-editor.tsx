@@ -16,6 +16,7 @@ import {
   GalleryHorizontal,
   MonitorPlay,
   BadgeCheck,
+  Sparkles,
 } from "lucide-react";
 import type { HomeSectionDTO } from "@/server/services/home.service";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,7 @@ const TYPE_META: Record<
   categories: { label: "Categories", icon: LayoutGrid },
   video: { label: "Video slider", icon: Video },
   videoBanner: { label: "Video banner", icon: MonitorPlay },
+  spotlight: { label: "Product spotlight", icon: Sparkles },
   certifications: { label: "Certifications", icon: BadgeCheck },
   testimonials: { label: "Testimonials", icon: Quote },
   banner: { label: "Banner", icon: ImageIcon },
@@ -528,6 +530,45 @@ export function HomeSectionsEditor({
                 </div>
               )}
 
+              {s.type === "spotlight" && (
+                <div className="grid gap-3 rounded-lg bg-muted/40 p-3 sm:grid-cols-2">
+                  <p className="text-xs text-muted-foreground sm:col-span-2">
+                    Marine Collagen hero, feature strip, a three-product stack (the section name is
+                    its heading) and a video card. Leave products empty to use featured products.
+                  </p>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label>Stack products (first 3 are shown)</Label>
+                    <ProductMultiSelect
+                      products={products}
+                      selected={s.productSlugs}
+                      onChange={(slugs) => update(i, { productSlugs: slugs })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>“Shop Now” link</Label>
+                    <Input value={s.ctaHref} onChange={(e) => update(i, { ctaHref: e.target.value })} placeholder="/products" className="font-mono" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>“View All” link</Label>
+                    <Input value={s.viewAllHref} onChange={(e) => update(i, { viewAllHref: e.target.value })} placeholder="/products" className="font-mono" />
+                  </div>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label>Video card clip</Label>
+                    <VideoUploader
+                      value={s.videoUrl}
+                      onChange={(url) => update(i, { videoUrl: url })}
+                    />
+                  </div>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label>Video poster (optional)</Label>
+                    <ImageUploader
+                      value={s.image ? [s.image] : []}
+                      onChange={(next) => update(i, { image: next[0] ?? "" })}
+                    />
+                  </div>
+                </div>
+              )}
+
               {s.type === "certifications" && (
                 <CertificationsEditor
                   items={s.certifications}
@@ -681,6 +722,7 @@ function AddSectionDialog({
     "cards",
     "video",
     "videoBanner",
+    "spotlight",
     "certifications",
     "testimonials",
     "banner",
@@ -762,7 +804,7 @@ function AddSectionDialog({
               onClick={() => setShowAdvanced((v) => !v)}
               className="text-xs font-medium text-muted-foreground underline-offset-2 hover:underline"
             >
-              {showAdvanced ? "Hide" : "More"} section types (card slider, video slider, video banner, certifications, testimonials, banner, rich text)
+              {showAdvanced ? "Hide" : "More"} section types (card slider, video slider, video banner, product spotlight, certifications, testimonials, banner, rich text)
             </button>
             {showAdvanced && (
               <div className="flex flex-wrap gap-2">

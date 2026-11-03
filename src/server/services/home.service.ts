@@ -22,6 +22,7 @@ export type HomeSectionDTO = {
     | "categories"
     | "video"
     | "videoBanner"
+    | "spotlight"
     | "certifications"
     | "testimonials"
     | "banner"

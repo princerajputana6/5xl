@@ -121,6 +121,7 @@ export const homeSectionSchema = z.object({
     "categories",
     "video",
     "videoBanner",
+    "spotlight",
     "certifications",
     "testimonials",
     "banner",
