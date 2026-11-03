@@ -130,23 +130,23 @@ export function SocialsSection() {
       <Reveal>
         <Heading title="Our Socials" subtitle="Follow 5XL for drops, training tips and real results." />
       </Reveal>
-      <Reveal delay={0.05} className="grid gap-3 sm:grid-cols-3 md:gap-5">
+      <Reveal delay={0.05} className="grid grid-cols-3 gap-2.5 md:gap-5">
         {SOCIALS.map(({ name, href, Icon, tile }) => (
           <a
             key={name}
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md md:p-5"
+            className="group flex flex-col items-center gap-2 rounded-2xl border border-border bg-card px-2 py-4 text-center transition-all sm:flex-row sm:gap-4 sm:p-4 sm:text-left duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md md:p-5"
           >
             <span className={cn("grid size-12 shrink-0 place-items-center rounded-xl text-white md:size-14", tile)}>
               <Icon className="size-6 md:size-7" />
             </span>
-            <span className="min-w-0 flex-1">
-              <span className="block font-bold">{name}</span>
-              <span className="block truncate text-sm text-muted-foreground">@5xl</span>
+            <span className="min-w-0 sm:flex-1">
+              <span className="block text-xs font-bold sm:text-base">{name}</span>
+              <span className="hidden truncate text-sm text-muted-foreground sm:block">@5xl</span>
             </span>
-            <ArrowUpRight className="size-5 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-foreground" />
+            <ArrowUpRight className="hidden size-5 text-muted-foreground sm:block transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-foreground" />
           </a>
         ))}
       </Reveal>
