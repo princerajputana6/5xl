@@ -4,12 +4,13 @@ import * as React from "react";
 import Link from "next/link";
 import { Cookie } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { pushDataLayer } from "@/lib/tracking";
 
 const STORAGE_KEY = "cookie-consent-v1";
 
-type WindowWithDataLayer = Window & {
-  dataLayer?: Record<string, unknown>[];
-};
+function pushConsent(choice: string) {
+  pushDataLayer({ event: "cookie_consent", cookie_consent: choice });
+}
 
 /**
  * Cookie consent banner. Shown on a visitor's first arrival until they choose
@@ -25,7 +26,11 @@ export function CookieConsent() {
     // before the banner slides in.
     const t = window.setTimeout(() => {
       try {
-        if (!localStorage.getItem(STORAGE_KEY)) setVisible(true);
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (!saved) setVisible(true);
+        // Re-announce a remembered choice so consent-gated GTM tags fire on
+        // every visit, not only the one where the shopper clicked Accept.
+        else pushConsent(saved);
       } catch {
         /* private mode / blocked storage — just don't show it */
       }
@@ -39,13 +44,7 @@ export function CookieConsent() {
     } catch {
       /* ignore */
     }
-    try {
-      const w = window as WindowWithDataLayer;
-      w.dataLayer = w.dataLayer || [];
-      w.dataLayer.push({ event: "cookie_consent", cookie_consent: choice });
-    } catch {
-      /* ignore */
-    }
+    pushConsent(choice);
     setVisible(false);
   }
 

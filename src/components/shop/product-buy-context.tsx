@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { trackViewItem } from "@/lib/tracking";
 import type { ProductDetailDTO, VariantDTO } from "@/types/catalog";
 
 /**
@@ -32,6 +33,19 @@ export function ProductBuyProvider({
 }) {
   const [variantIdx, setVariantIdx] = React.useState(0);
   const [qty, setQty] = React.useState(1);
+
+  React.useEffect(() => {
+    trackViewItem({
+      productId: product.id,
+      name: product.name,
+      price: product.variants[0]?.price ?? product.price,
+      variantLabel: product.variants[0]?.label ?? null,
+      brand: product.brandName,
+      category: product.categoryName,
+    });
+    // Once per product page view.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
 
   const variant =
     product.variants.length > 0 ? product.variants[variantIdx] ?? null : null;

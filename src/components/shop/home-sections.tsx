@@ -14,6 +14,7 @@ import { ProductCard } from "@/components/shop/product-card";
 import { CategoryGrid } from "@/components/shop/category-grid";
 import { VideoSlider, type VideoSlide } from "@/components/shop/video-slider";
 import { TestimonialsSection } from "@/components/shop/testimonials-section";
+import { CollagenSpotlight } from "@/components/shop/collagen-spotlight";
 import { Reveal } from "@/components/fx/scroll-fx";
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/format";
@@ -370,6 +371,12 @@ async function resolve(s: HomeSectionDTO): Promise<Resolved> {
       .filter((c) => c.image || c.title);
     return { section: s, cards };
   }
+  if (s.type === "spotlight") {
+    // Hand-picked stack products, falling back to featured ones.
+    const picked = s.productSlugs.length ? await getProductsBySlugs(s.productSlugs) : [];
+    const products = picked.length ? picked : await getFeaturedProducts(3);
+    return { section: s, products };
+  }
   if (s.type === "categories") {
     const categories = await listActiveCategories(
       s.categorySlugs.length ? s.categorySlugs : undefined
@@ -420,6 +427,9 @@ export async function HomeSections({ sections }: { sections: HomeSectionDTO[] })
 
         // Certifications render as their own full-bleed brand band.
         if (s.type === "certifications") return <CertBand key={s.id} section={s} />;
+        // Product spotlight carries its own fixed light design.
+        if (s.type === "spotlight")
+          return <CollagenSpotlight key={s.id} section={s} products={products ?? []} />;
         // Video banner is edge-to-edge with its own overlay.
         if (s.type === "videoBanner") return <VideoBanner key={s.id} section={s} />;
 

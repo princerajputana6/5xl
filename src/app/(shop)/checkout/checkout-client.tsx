@@ -9,6 +9,7 @@ import { useCart } from "@/components/providers/cart-provider";
 import { AddressBook } from "@/components/shop/address-book";
 import { computeAmounts } from "@/lib/cart-pricing";
 import { formatINR } from "@/lib/format";
+import { trackBeginCheckout, trackPurchase, type AnalyticsItem } from "@/lib/tracking";
 import { ProductImage } from "@/components/shop/product-image";
 import type { CheckoutSession } from "@/types/order";
 import type { SavedAddress } from "@/server/services/address.service";
@@ -103,6 +104,22 @@ export function CheckoutClient({
 
   const amounts = computeAmounts(subtotal, coupon?.discount ?? 0, pointsRedeemed);
 
+  const analyticsItems: AnalyticsItem[] = items.map((i) => ({
+    productId: i.productId,
+    name: i.name,
+    price: i.price,
+    qty: i.qty,
+    variantLabel: i.variantLabel,
+  }));
+
+  // begin_checkout fires once, after the cart has loaded from storage.
+  const checkoutTracked = React.useRef(false);
+  React.useEffect(() => {
+    if (!isHydrated || checkoutTracked.current || items.length === 0) return;
+    checkoutTracked.current = true;
+    trackBeginCheckout(analyticsItems, amounts.total);
+  }, [isHydrated, items.length, analyticsItems, amounts.total]);
+
   async function applyCoupon() {
     const code = couponDraft.trim();
     if (!code) return;
@@ -148,6 +165,12 @@ export function CheckoutClient({
       setPending(false);
       return;
     }
+    trackPurchase(analyticsItems, {
+      transactionId: orderNumber,
+      value: amounts.total,
+      shipping: amounts.shipping,
+      coupon: coupon?.code,
+    });
     clear();
     toast.success("Payment successful — order confirmed!");
     router.push(`/account/orders/${orderNumber}?placed=1`);

@@ -8,6 +8,7 @@ import { Hero } from "@/components/shop/hero";
 import { CategoryGrid } from "@/components/shop/category-grid";
 import { HomeSections } from "@/components/shop/home-sections";
 import { BenefitsMarquee } from "@/components/shop/benefits-marquee";
+import { FeaturedTrusted, SeenTrusted, SocialsSection } from "@/components/shop/trust-sections";
 import { Reveal, Parallax } from "@/components/fx/scroll-fx";
 import { Button } from "@/components/ui/button";
 import { iconByName } from "@/lib/icon-map";
@@ -134,6 +135,11 @@ export default async function HomePage() {
           )}
         </>
       )}
+
+      {/* Marketplaces, "seen & trusted" clips and socials */}
+      <FeaturedTrusted />
+      <SeenTrusted />
+      <SocialsSection />
 
       {/* CTA */}
       <section className="container-5xl pb-14 pt-4 md:pt-6">

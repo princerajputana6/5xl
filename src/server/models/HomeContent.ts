@@ -93,6 +93,7 @@ const HomeSectionSchema = new Schema(
         "categories",
         "video",
         "videoBanner",
+        "spotlight",
         "certifications",
         "testimonials",
         "banner",
