@@ -1,7 +1,7 @@
 import { ArrowUpRight } from "lucide-react";
 import { siteConfig } from "@/lib/site";
 import { Reveal } from "@/components/fx/scroll-fx";
-import { VideoSlider, type VideoSlide } from "@/components/shop/video-slider";
+import { SeenVideo } from "@/components/shop/seen-video";
 import { InstagramIcon, FacebookIcon, XIcon } from "@/components/shop/social-icons";
 import { cn } from "@/lib/utils";
 
@@ -90,13 +90,13 @@ export function FeaturedTrusted() {
   );
 }
 
-const SEEN_VIDEOS: VideoSlide[] = [
-  { url: "/videos/collagen-story.mp4", poster: "", caption: "", product: null },
-  { url: "/videos/hero-gym.mp4", poster: "/videos/hero-poster.jpg", caption: "", product: null },
-  { url: "/videos/collagen-story.mp4", poster: "", caption: "", product: null },
+const SEEN_VIDEOS = [
+  { src: "/videos/collagen-story.mp4" },
+  { src: "/videos/hero-gym.mp4", poster: "/videos/hero-poster.jpg" },
+  { src: "/videos/collagen-story.mp4" },
 ];
 
-/** "Seen & Trusted By" — three static clips. */
+/** "Seen & Trusted By" — three static clips, always side by side. */
 export function SeenTrusted() {
   return (
     <section className="border-y border-border bg-muted/30">
@@ -104,8 +104,10 @@ export function SeenTrusted() {
         <Reveal>
           <Heading title="Seen & Trusted By" subtitle="As seen" />
         </Reveal>
-        <Reveal delay={0.05}>
-          <VideoSlider slides={SEEN_VIDEOS} mobileColumns={1.5} />
+        <Reveal delay={0.05} className="mx-auto grid max-w-4xl grid-cols-3 gap-2.5 md:gap-5">
+          {SEEN_VIDEOS.map((v, i) => (
+            <SeenVideo key={i} src={v.src} poster={v.poster} label={`video ${i + 1}`} />
+          ))}
         </Reveal>
       </div>
     </section>
