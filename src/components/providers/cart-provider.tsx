@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { trackAddToCart } from "@/lib/tracking";
 
 export type CartItem = {
   productId: string;
@@ -72,6 +73,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
     setLastAdded(resultingLine);
     setBarOpen(true);
+    trackAddToCart({
+      productId: item.productId,
+      name: item.name,
+      price: item.price,
+      qty,
+      variantLabel: item.variantLabel,
+    });
   }, []);
 
   const removeItem = React.useCallback((productId: string, variantId: string | null) => {
