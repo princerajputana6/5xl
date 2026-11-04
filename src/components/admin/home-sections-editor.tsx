@@ -544,13 +544,9 @@ export function HomeSectionsEditor({
                       onChange={(slugs) => update(i, { productSlugs: slugs })}
                     />
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 sm:col-span-2">
                     <Label>“Shop Now” link</Label>
                     <Input value={s.ctaHref} onChange={(e) => update(i, { ctaHref: e.target.value })} placeholder="/products" className="font-mono" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>“View All” link</Label>
-                    <Input value={s.viewAllHref} onChange={(e) => update(i, { viewAllHref: e.target.value })} placeholder="/products" className="font-mono" />
                   </div>
                   <div className="space-y-1.5 sm:col-span-2">
                     <Label>Video card clip</Label>

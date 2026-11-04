@@ -67,7 +67,7 @@ export function SpotlightVideo({
       <div className="relative aspect-[2.6/1] md:aspect-[3.4/1]">
         <video
           ref={ref}
-          className="absolute inset-y-0 left-0 h-full w-full object-cover md:w-3/5"
+          className="absolute inset-0 size-full object-cover"
           src={src}
           poster={poster}
           autoPlay
@@ -78,16 +78,16 @@ export function SpotlightVideo({
         />
         {!watching && (
           <>
-            <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-[#101418]/70 to-[#101418] md:via-[#101418]/40" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#101418] via-[#101418]/75 to-black/10" />
             <button
               type="button"
               onClick={watch}
               aria-label="Play video"
-              className="absolute left-[14%] top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full border-2 border-white/90 bg-black/20 text-white backdrop-blur-sm transition-transform hover:scale-105 md:left-[22%] md:size-16"
+              className="absolute right-[12%] top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full border-2 border-white/90 bg-black/20 text-white backdrop-blur-sm transition-transform hover:scale-105 md:right-[18%] md:size-16"
             >
               <Play className="ml-0.5 size-5 fill-white md:size-7" />
             </button>
-            <div className="absolute inset-y-0 right-0 flex w-[48%] flex-col justify-center gap-1.5 pr-4 text-white md:w-[40%] md:gap-3 md:pr-12">
+            <div className="absolute inset-y-0 left-0 flex w-[60%] flex-col justify-center gap-1.5 pl-5 text-white md:w-[45%] md:gap-3 md:pl-12">
               <p className="text-[0.55rem] font-semibold uppercase tracking-[0.2em] text-[#5fb3f0] md:text-xs">
                 {eyebrow}
               </p>
