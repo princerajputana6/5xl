@@ -119,44 +119,43 @@ export function CollagenSpotlight({
 }) {
   const stack = products.slice(0, STACK_SIZE);
   const shopHref = section.ctaHref || "/products";
-  const viewAllHref = section.viewAllHref || "/products";
 
   return (
     <section className="bg-[#f7f4ef] text-[#14213d]">
       <div className="container-5xl py-6 md:py-12">
         {/* Hero */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#fbf8f3] via-[#f4f1ec] to-[#dcecf7]">
+        <div className="relative min-h-[440px] overflow-hidden rounded-3xl bg-gradient-to-br from-[#fbf8f3] via-[#f4f1ec] to-[#dcecf7]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/images/spotlight/collagen-model.png"
             alt=""
             aria-hidden
-            className="pointer-events-none absolute bottom-0 -right-10 h-[80%] w-auto max-w-none object-contain mix-blend-multiply [mask-image:linear-gradient(to_right,transparent_5%,black_45%)] md:right-[10%] md:h-full"
+            className="pointer-events-none absolute bottom-0 -right-10 h-[86%] w-auto max-w-none object-contain mix-blend-multiply [mask-image:linear-gradient(to_right,transparent_5%,black_45%)] md:right-[10%] md:h-full"
           />
-          <div className="relative z-10 max-w-[64%] p-5 md:max-w-xl md:p-12">
+          <div className="relative z-10 max-w-[66%] px-5 py-7 md:max-w-xl md:p-14">
             <p className="text-[0.65rem] font-semibold uppercase tracking-[0.28em] text-[#5b6577] md:text-xs">
               Marine Collagen
             </p>
-            <h2 className="mt-2 text-[1.7rem] font-extrabold leading-[1.02] tracking-tight md:text-6xl">
+            <h2 className="mt-2 text-[2rem] font-extrabold leading-[1.02] tracking-tight md:text-7xl">
               Beauty Strength
               <span className="block whitespace-nowrap text-[#2f8fdc]">from Within.</span>
             </h2>
-            <p className="mt-3 text-xs font-medium leading-snug text-[#3a4558] md:text-base">
+            <p className="mt-3 text-[0.8rem] font-medium leading-snug text-[#3a4558] md:text-lg">
               Supports Healthy Skin, Hair, Nails, Joints &amp; Bones.
             </p>
-            <ul className="mt-4 flex gap-1.5 md:mt-6 md:gap-6">
+            <ul className="mt-5 flex gap-2 md:mt-7 md:gap-6">
               {BENEFITS.map(({ icon: Icon, label }) => (
                 <li key={label} className="flex w-14 flex-col items-center gap-1.5 text-center md:w-20">
-                  <span className="grid size-10 place-items-center rounded-full border border-[#14213d]/15 bg-white md:size-14">
+                  <span className="grid size-11 place-items-center rounded-full border border-[#14213d]/15 bg-white md:size-16">
                     <Icon className="size-5 stroke-[1.5] md:size-6" />
                   </span>
-                  <span className="text-[0.6rem] font-medium leading-tight md:text-xs">{label}</span>
+                  <span className="text-[0.65rem] font-medium leading-tight md:text-sm">{label}</span>
                 </li>
               ))}
             </ul>
             <Link
               href={shopHref}
-              className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#14213d] px-5 py-2.5 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5 md:mt-8 md:px-7 md:py-3"
+              className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#14213d] px-6 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5 md:mt-8 md:px-7 md:py-3"
             >
               Shop Now <ArrowRight className="size-4" />
             </Link>
@@ -165,7 +164,7 @@ export function CollagenSpotlight({
           <img
             src="/images/spotlight/collagen-tub.png"
             alt="5XL Marine Collagen"
-            className="pointer-events-none absolute bottom-3 right-2 z-10 w-[34%] max-w-[260px] drop-shadow-[0_18px_22px_rgba(20,33,61,0.28)] md:bottom-8 md:right-8 md:w-[24%]"
+            className="pointer-events-none absolute bottom-4 right-2 z-10 w-[37%] max-w-[300px] drop-shadow-[0_18px_22px_rgba(20,33,61,0.28)] md:bottom-8 md:right-8 md:w-[24%]"
           />
         </div>
 
@@ -184,18 +183,9 @@ export function CollagenSpotlight({
         {/* Product stack */}
         {stack.length > 0 && (
           <>
-            <div className="mt-7 flex items-center justify-between gap-4 md:mt-12">
-              <h3 className="text-xl font-extrabold tracking-tight md:text-3xl">
-                {section.title || "Your Beauty Care Stack"}
-              </h3>
-              <Link
-                href={viewAllHref}
-                className="group inline-flex shrink-0 items-center gap-1 text-sm font-semibold"
-              >
-                View All
-                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-              </Link>
-            </div>
+            <h3 className="mt-7 text-xl font-extrabold tracking-tight md:mt-12 md:text-3xl">
+              {section.title || "Your Beauty Care Stack"}
+            </h3>
             <div className="mt-4 grid grid-cols-3 gap-2.5 md:mt-6 md:gap-6">
               {stack.map((p) => (
                 <StackCard key={p.id} product={p} />

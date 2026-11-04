@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import { Manrope, Anton } from "next/font/google";
+import { Outfit, Barlow_Condensed } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
@@ -8,15 +8,18 @@ import { siteConfig } from "@/lib/site";
 
 const GTM_ID = siteConfig.gtmId;
 
-const manrope = Manrope({
+/** Body copy: clean, modern geometric sans. */
+const outfit = Outfit({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
 });
 
-const anton = Anton({
+/** Headings: heavy condensed italic for a sporty, athletic feel. */
+const barlowCondensed = Barlow_Condensed({
   subsets: ["latin"],
-  weight: "400",
+  weight: ["700", "800", "900"],
+  style: ["normal", "italic"],
   variable: "--font-display",
   display: "swap",
 });
@@ -59,7 +62,7 @@ export default function RootLayout({
         )}
       </head>
       <body
-        className={`${manrope.variable} ${anton.variable} min-h-dvh antialiased`}
+        className={`${outfit.variable} ${barlowCondensed.variable} min-h-dvh antialiased`}
       >
         {GTM_ID && (
           <noscript>

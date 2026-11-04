@@ -156,7 +156,7 @@ export function Hero({
                 <>
                   {head && <>{head} </>}
                   <span className="relative inline-block">
-                    <span className="relative z-10 -skew-x-6 px-2 text-neutral-950">{tail}</span>
+                    <span className="relative z-10 pl-3 pr-2.5 text-neutral-950">{tail}</span>
                     <motion.span
                       aria-hidden
                       initial={reduce ? { scaleX: 1 } : { scaleX: 0 }}
