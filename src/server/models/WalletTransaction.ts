@@ -1,4 +1,5 @@
-import { Schema, model, models, type Model, type InferSchemaType } from "mongoose";
+import { Schema, type InferSchemaType } from "mongoose";
+import { defineModel } from "@/server/db";
 
 /** Immutable ledger entry for a user's reward points or wallet balance. */
 const WalletTransactionSchema = new Schema(
@@ -18,6 +19,4 @@ export type WalletTransactionDoc = InferSchemaType<typeof WalletTransactionSchem
   _id: string;
 };
 
-export const WalletTransaction: Model<WalletTransactionDoc> =
-  (models.WalletTransaction as Model<WalletTransactionDoc>) ??
-  model<WalletTransactionDoc>("WalletTransaction", WalletTransactionSchema);
+export const WalletTransaction = defineModel<WalletTransactionDoc>("WalletTransaction", WalletTransactionSchema);

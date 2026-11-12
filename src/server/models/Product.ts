@@ -1,4 +1,5 @@
-import { Schema, model, models, type Model, type InferSchemaType } from "mongoose";
+import { Schema, type InferSchemaType } from "mongoose";
+import { defineModel } from "@/server/db";
 
 const VariantSchema = new Schema(
   {
@@ -76,6 +77,4 @@ ProductSchema.index({ createdAt: -1 });
 
 export type ProductDoc = InferSchemaType<typeof ProductSchema> & { _id: string };
 
-export const Product: Model<ProductDoc> =
-  (models.Product as Model<ProductDoc>) ??
-  model<ProductDoc>("Product", ProductSchema);
+export const Product = defineModel<ProductDoc>("Product", ProductSchema);

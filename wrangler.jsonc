@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "5xl",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-11-01",
+  // nodejs_compat enables node:net / node:tls, required by the MongoDB driver
+  // (mongoose 9) at compat dates >= 2025-03-20.
+  "compatibility_flags": ["nodejs_compat"],
+  // esbuild's keep_names injects __name() wrappers; next-themes stringifies its
+  // init function into an inline <script>, where __name is undefined and throws
+  // ("__name is not defined", theme flashes). Disabling keep_names fixes it.
+  "keep_names": false,
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

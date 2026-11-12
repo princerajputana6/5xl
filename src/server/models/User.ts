@@ -1,4 +1,5 @@
-import { Schema, model, models, type Model, type InferSchemaType } from "mongoose";
+import { Schema, type InferSchemaType } from "mongoose";
+import { defineModel } from "@/server/db";
 import { ROLES } from "@/server/rbac";
 
 const UserSchema = new Schema(
@@ -35,5 +36,4 @@ const UserSchema = new Schema(
 
 export type UserDoc = InferSchemaType<typeof UserSchema> & { _id: string };
 
-export const User: Model<UserDoc> =
-  (models.User as Model<UserDoc>) ?? model<UserDoc>("User", UserSchema);
+export const User = defineModel<UserDoc>("User", UserSchema);

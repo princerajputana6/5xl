@@ -1,4 +1,5 @@
-import { Schema, model, models, type Model, type InferSchemaType } from "mongoose";
+import { Schema, type InferSchemaType } from "mongoose";
+import { defineModel } from "@/server/db";
 
 /** Line item — a snapshot taken at purchase time (never re-read from Product). */
 const OrderItemSchema = new Schema(
@@ -110,5 +111,4 @@ OrderSchema.index({ createdAt: -1 });
 
 export type OrderDoc = InferSchemaType<typeof OrderSchema> & { _id: string };
 
-export const Order: Model<OrderDoc> =
-  (models.Order as Model<OrderDoc>) ?? model<OrderDoc>("Order", OrderSchema);
+export const Order = defineModel<OrderDoc>("Order", OrderSchema);

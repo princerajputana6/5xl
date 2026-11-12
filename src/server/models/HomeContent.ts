@@ -1,4 +1,5 @@
-import { Schema, model, models, type Model, type InferSchemaType } from "mongoose";
+import { Schema, type InferSchemaType } from "mongoose";
+import { defineModel } from "@/server/db";
 
 /**
  * Singleton document holding editable storefront homepage content (hero slides,
@@ -182,6 +183,4 @@ const HomeContentSchema = new Schema(
 
 export type HomeContentDoc = InferSchemaType<typeof HomeContentSchema> & { _id: string };
 
-export const HomeContent: Model<HomeContentDoc> =
-  (models.HomeContent as Model<HomeContentDoc>) ??
-  model<HomeContentDoc>("HomeContent", HomeContentSchema);
+export const HomeContent = defineModel<HomeContentDoc>("HomeContent", HomeContentSchema);

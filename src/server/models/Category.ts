@@ -1,4 +1,5 @@
-import { Schema, model, models, type Model, type InferSchemaType } from "mongoose";
+import { Schema, type InferSchemaType } from "mongoose";
+import { defineModel } from "@/server/db";
 
 const CategorySchema = new Schema(
   {
@@ -22,6 +23,4 @@ const CategorySchema = new Schema(
 
 export type CategoryDoc = InferSchemaType<typeof CategorySchema> & { _id: string };
 
-export const Category: Model<CategoryDoc> =
-  (models.Category as Model<CategoryDoc>) ??
-  model<CategoryDoc>("Category", CategorySchema);
+export const Category = defineModel<CategoryDoc>("Category", CategorySchema);

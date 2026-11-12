@@ -1,4 +1,5 @@
-import { Schema, model, models, type Model, type InferSchemaType } from "mongoose";
+import { Schema, type InferSchemaType } from "mongoose";
+import { defineModel } from "@/server/db";
 
 const WishlistSchema = new Schema(
   {
@@ -10,6 +11,4 @@ const WishlistSchema = new Schema(
 
 export type WishlistDoc = InferSchemaType<typeof WishlistSchema> & { _id: string };
 
-export const Wishlist: Model<WishlistDoc> =
-  (models.Wishlist as Model<WishlistDoc>) ??
-  model<WishlistDoc>("Wishlist", WishlistSchema);
+export const Wishlist = defineModel<WishlistDoc>("Wishlist", WishlistSchema);

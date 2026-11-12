@@ -1,4 +1,5 @@
-import { Schema, model, models, type Model, type InferSchemaType } from "mongoose";
+import { Schema, type InferSchemaType } from "mongoose";
+import { defineModel } from "@/server/db";
 
 const BrandSchema = new Schema(
   {
@@ -17,5 +18,4 @@ const BrandSchema = new Schema(
 
 export type BrandDoc = InferSchemaType<typeof BrandSchema> & { _id: string };
 
-export const Brand: Model<BrandDoc> =
-  (models.Brand as Model<BrandDoc>) ?? model<BrandDoc>("Brand", BrandSchema);
+export const Brand = defineModel<BrandDoc>("Brand", BrandSchema);

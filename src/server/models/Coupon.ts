@@ -1,4 +1,5 @@
-import { Schema, model, models, type Model, type InferSchemaType } from "mongoose";
+import { Schema, type InferSchemaType } from "mongoose";
+import { defineModel } from "@/server/db";
 
 const CouponSchema = new Schema(
   {
@@ -31,5 +32,4 @@ const CouponSchema = new Schema(
 
 export type CouponDoc = InferSchemaType<typeof CouponSchema> & { _id: string };
 
-export const Coupon: Model<CouponDoc> =
-  (models.Coupon as Model<CouponDoc>) ?? model<CouponDoc>("Coupon", CouponSchema);
+export const Coupon = defineModel<CouponDoc>("Coupon", CouponSchema);

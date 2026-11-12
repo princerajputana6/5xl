@@ -1,4 +1,5 @@
-import { Schema, model, models, type Model, type InferSchemaType } from "mongoose";
+import { Schema, type InferSchemaType } from "mongoose";
+import { defineModel } from "@/server/db";
 
 const AddressSchema = new Schema(
   {
@@ -19,6 +20,4 @@ const AddressSchema = new Schema(
 
 export type AddressDoc = InferSchemaType<typeof AddressSchema> & { _id: string };
 
-export const Address: Model<AddressDoc> =
-  (models.Address as Model<AddressDoc>) ??
-  model<AddressDoc>("Address", AddressSchema);
+export const Address = defineModel<AddressDoc>("Address", AddressSchema);

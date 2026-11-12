@@ -1,4 +1,5 @@
-import { Schema, model, models, type Model, type InferSchemaType } from "mongoose";
+import { Schema, type InferSchemaType } from "mongoose";
+import { defineModel } from "@/server/db";
 
 /**
  * Blog post / article. Content is stored as HTML (authored in the admin editor
@@ -32,5 +33,4 @@ PostSchema.index({ status: 1, publishedAt: -1 });
 
 export type PostDoc = InferSchemaType<typeof PostSchema> & { _id: string };
 
-export const Post: Model<PostDoc> =
-  (models.Post as Model<PostDoc>) ?? model<PostDoc>("Post", PostSchema);
+export const Post = defineModel<PostDoc>("Post", PostSchema);

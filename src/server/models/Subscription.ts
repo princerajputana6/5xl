@@ -1,4 +1,5 @@
-import { Schema, model, models, type Model, type InferSchemaType } from "mongoose";
+import { Schema, type InferSchemaType } from "mongoose";
+import { defineModel } from "@/server/db";
 
 const SubscriptionSchema = new Schema(
   {
@@ -26,6 +27,4 @@ const SubscriptionSchema = new Schema(
 
 export type SubscriptionDoc = InferSchemaType<typeof SubscriptionSchema> & { _id: string };
 
-export const Subscription: Model<SubscriptionDoc> =
-  (models.Subscription as Model<SubscriptionDoc>) ??
-  model<SubscriptionDoc>("Subscription", SubscriptionSchema);
+export const Subscription = defineModel<SubscriptionDoc>("Subscription", SubscriptionSchema);

@@ -1,4 +1,5 @@
-import { Schema, model, models, type Model, type InferSchemaType } from "mongoose";
+import { Schema, type InferSchemaType } from "mongoose";
+import { defineModel } from "@/server/db";
 
 const ReviewSchema = new Schema(
   {
@@ -18,5 +19,4 @@ const ReviewSchema = new Schema(
 
 export type ReviewDoc = InferSchemaType<typeof ReviewSchema> & { _id: string };
 
-export const Review: Model<ReviewDoc> =
-  (models.Review as Model<ReviewDoc>) ?? model<ReviewDoc>("Review", ReviewSchema);
+export const Review = defineModel<ReviewDoc>("Review", ReviewSchema);

@@ -1,4 +1,5 @@
-import { Schema, model, models, type Model } from "mongoose";
+import { Schema } from "mongoose";
+import { defineModel } from "@/server/db";
 
 /**
  * Atomic named sequence. Used to mint human-friendly, monotonic order numbers
@@ -11,9 +12,7 @@ const CounterSchema = new Schema<CounterDoc>({
   seq: { type: Number, default: 0 },
 });
 
-export const Counter: Model<CounterDoc> =
-  (models.Counter as Model<CounterDoc>) ??
-  model<CounterDoc>("Counter", CounterSchema);
+export const Counter = defineModel<CounterDoc>("Counter", CounterSchema);
 
 /** Increment and return the next value of a named counter (atomic upsert). */
 export async function nextSequence(name: string): Promise<number> {
