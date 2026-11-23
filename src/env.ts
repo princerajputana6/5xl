@@ -12,7 +12,9 @@ const schema = z.object({
     .enum(["development", "test", "production"])
     .default("development"),
 
-  MONGODB_URI: z.string().min(1, "MONGODB_URI is required"),
+  // Legacy — only the one-time Mongo→D1 migration script reads this now. The
+  // running app uses Cloudflare D1 (the `DB` binding), not Mongo.
+  MONGODB_URI: z.string().optional(),
 
   // Auth.js v5
   AUTH_SECRET: z.string().min(1, "AUTH_SECRET is required"),

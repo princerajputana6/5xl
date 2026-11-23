@@ -1,6 +1,6 @@
-import { connectDB } from "@/server/db";
-import { Category } from "@/server/models/Category";
-import { Product } from "@/server/models/Product";
+import { and, asc, count, desc, eq, inArray, ne } from "drizzle-orm";
+import { db } from "@/server/db";
+import { categories, products } from "@/server/schema";
 import type { AdminCategoryInput } from "@/lib/validators/cms";
 import { AdminError } from "@/server/services/admin.service";
 
@@ -29,46 +29,48 @@ export type PublicCategory = {
 };
 
 async function productCountsByCategory(): Promise<Map<string, number>> {
-  const agg = await Product.aggregate<{ _id: unknown; n: number }>([
-    { $match: { status: "active" } },
-    { $group: { _id: "$category", n: { $sum: 1 } } },
-  ]);
-  return new Map(agg.map((a) => [String(a._id), a.n]));
+  const agg = await db()
+    .select({ categoryId: products.categoryId, n: count() })
+    .from(products)
+    .where(eq(products.status, "active"))
+    .groupBy(products.categoryId)
+    .all();
+  return new Map(agg.map((a) => [a.categoryId, a.n]));
 }
 
 /** Admin: every category with parent name + live product count. */
 export async function listCategoriesAdmin(): Promise<CategoryRow[]> {
-  await connectDB();
   const [cats, counts] = await Promise.all([
-    Category.find({}).sort({ order: 1, name: 1 }).lean(),
+    db().select().from(categories).orderBy(asc(categories.order), asc(categories.name)).all(),
     productCountsByCategory(),
   ]);
-  const nameById = new Map(cats.map((c) => [String(c._id), c.name]));
+  const nameById = new Map(cats.map((c) => [c.id, c.name]));
 
   return cats.map((c) => ({
-    id: String(c._id),
+    id: c.id,
     name: c.name,
     slug: c.slug,
     description: c.description ?? null,
     tagline: c.tagline ?? null,
     image: c.image ?? null,
     emoji: c.emoji ?? null,
-    parent: c.parent ? String(c.parent) : null,
-    parentName: c.parent ? nameById.get(String(c.parent)) ?? null : null,
+    parent: c.parentId ?? null,
+    parentName: c.parentId ? nameById.get(c.parentId) ?? null : null,
     order: c.order ?? 0,
     isActive: c.isActive !== false,
-    productCount: counts.get(String(c._id)) ?? 0,
+    productCount: counts.get(c.id) ?? 0,
   }));
 }
 
 /** Storefront: active categories for the homepage grid + counts. */
 export async function listActiveCategories(slugs?: string[]): Promise<PublicCategory[]> {
-  await connectDB();
-  const filter: Record<string, unknown> = { isActive: true };
-  if (slugs && slugs.length > 0) filter.slug = { $in: slugs };
+  const where =
+    slugs && slugs.length > 0
+      ? and(eq(categories.isActive, true), inArray(categories.slug, slugs))
+      : eq(categories.isActive, true);
 
   const [cats, counts] = await Promise.all([
-    Category.find(filter).sort({ order: 1, name: 1 }).lean(),
+    db().select().from(categories).where(where).orderBy(asc(categories.order), asc(categories.name)).all(),
     productCountsByCategory(),
   ]);
 
@@ -78,7 +80,7 @@ export async function listActiveCategories(slugs?: string[]): Promise<PublicCate
     tagline: c.tagline ?? null,
     image: c.image ?? null,
     emoji: c.emoji ?? null,
-    productCount: counts.get(String(c._id)) ?? 0,
+    productCount: counts.get(c.id) ?? 0,
   }));
 
   // Preserve the admin-chosen order when an explicit slug list is given.
@@ -90,8 +92,7 @@ export async function listActiveCategories(slugs?: string[]): Promise<PublicCate
 }
 
 export async function getCategoryAdmin(id: string): Promise<AdminCategoryInput | null> {
-  await connectDB();
-  const c = await Category.findById(id).lean();
+  const c = await db().select().from(categories).where(eq(categories.id, id)).get();
   if (!c) return null;
   return {
     name: c.name,
@@ -100,7 +101,7 @@ export async function getCategoryAdmin(id: string): Promise<AdminCategoryInput |
     tagline: c.tagline ?? "",
     image: c.image ?? "",
     emoji: c.emoji ?? "",
-    parent: c.parent ? String(c.parent) : null,
+    parent: c.parentId ?? null,
     order: c.order ?? 0,
     isActive: c.isActive !== false,
     seo: { title: c.seo?.title ?? "", description: c.seo?.description ?? "" },
@@ -108,57 +109,82 @@ export async function getCategoryAdmin(id: string): Promise<AdminCategoryInput |
 }
 
 async function assertUniqueSlug(slug: string, excludeId?: string) {
-  const existing = await Category.findOne({ slug }).select("_id").lean();
-  if (existing && String(existing._id) !== excludeId) {
+  const existing = await db()
+    .select({ id: categories.id })
+    .from(categories)
+    .where(eq(categories.slug, slug))
+    .get();
+  if (existing && existing.id !== excludeId) {
     throw new AdminError("Another category already uses that slug.", 409);
   }
 }
 
-export async function createCategory(input: AdminCategoryInput): Promise<string> {
-  await connectDB();
-  await assertUniqueSlug(input.slug);
-  const last = await Category.findOne({}).sort({ order: -1 }).select("order").lean();
-  const doc = await Category.create({
-    ...input,
-    parent: input.parent || null,
-    order: input.order ?? (last?.order ?? 0) + 1,
+function mapInput(input: AdminCategoryInput) {
+  return {
+    name: input.name,
+    slug: input.slug,
+    description: input.description ?? "",
+    tagline: input.tagline ?? "",
+    image: input.image ?? "",
+    emoji: input.emoji ?? "",
+    parentId: input.parent || null,
     isActive: input.isActive ?? true,
-  });
-  return String(doc._id);
+    seo: { title: input.seo?.title ?? "", description: input.seo?.description ?? "" },
+  };
+}
+
+export async function createCategory(input: AdminCategoryInput): Promise<string> {
+  await assertUniqueSlug(input.slug);
+  const last = await db()
+    .select({ order: categories.order })
+    .from(categories)
+    .orderBy(desc(categories.order))
+    .get();
+  const [row] = await db()
+    .insert(categories)
+    .values({ ...mapInput(input), order: input.order ?? (last?.order ?? 0) + 1 })
+    .returning({ id: categories.id });
+  return row.id;
 }
 
 export async function updateCategory(id: string, input: AdminCategoryInput): Promise<void> {
-  await connectDB();
   await assertUniqueSlug(input.slug, id);
   if (input.parent && input.parent === id) {
     throw new AdminError("A category cannot be its own parent.", 400);
   }
-  const res = await Category.updateOne(
-    { _id: id },
-    { $set: { ...input, parent: input.parent || null } }
-  );
-  if (res.matchedCount === 0) throw new AdminError("Category not found.", 404);
+  const res = await db()
+    .update(categories)
+    .set({ ...mapInput(input), order: input.order ?? 0 })
+    .where(eq(categories.id, id))
+    .returning({ id: categories.id });
+  if (res.length === 0) throw new AdminError("Category not found.", 404);
 }
 
 export async function deleteCategory(id: string): Promise<void> {
-  await connectDB();
-  const inUse = await Product.countDocuments({ category: id });
-  if (inUse > 0) {
+  const inUse = await db()
+    .select({ n: count() })
+    .from(products)
+    .where(eq(products.categoryId, id))
+    .get();
+  if ((inUse?.n ?? 0) > 0) {
     throw new AdminError(
-      `Can't delete — ${inUse} product${inUse === 1 ? "" : "s"} still use this category.`,
+      `Can't delete — ${inUse!.n} product${inUse!.n === 1 ? "" : "s"} still use this category.`,
       409
     );
   }
-  const hasChildren = await Category.countDocuments({ parent: id });
-  if (hasChildren > 0) {
+  const children = await db()
+    .select({ n: count() })
+    .from(categories)
+    .where(eq(categories.parentId, id))
+    .get();
+  if ((children?.n ?? 0) > 0) {
     throw new AdminError("Can't delete — remove or reassign its sub-categories first.", 409);
   }
-  await Category.deleteOne({ _id: id });
+  await db().delete(categories).where(eq(categories.id, id));
 }
 
 export async function reorderCategories(items: { id: string; order: number }[]): Promise<void> {
-  await connectDB();
-  await Category.bulkWrite(
-    items.map((it) => ({ updateOne: { filter: { _id: it.id }, update: { $set: { order: it.order } } } }))
-  );
+  for (const it of items) {
+    await db().update(categories).set({ order: it.order }).where(eq(categories.id, it.id));
+  }
 }

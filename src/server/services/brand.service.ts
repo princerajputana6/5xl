@@ -1,6 +1,6 @@
-import { connectDB } from "@/server/db";
-import { Brand } from "@/server/models/Brand";
-import { Product } from "@/server/models/Product";
+import { asc, count, eq } from "drizzle-orm";
+import { db } from "@/server/db";
+import { brands, products } from "@/server/schema";
 import type { AdminBrandInput } from "@/lib/validators/cms";
 import { AdminError } from "@/server/services/admin.service";
 
@@ -15,33 +15,33 @@ export type BrandRow = {
 };
 
 async function productCountsByBrand(): Promise<Map<string, number>> {
-  const agg = await Product.aggregate<{ _id: unknown; n: number }>([
-    { $match: { status: "active" } },
-    { $group: { _id: "$brand", n: { $sum: 1 } } },
-  ]);
-  return new Map(agg.map((a) => [String(a._id), a.n]));
+  const agg = await db()
+    .select({ brandId: products.brandId, n: count() })
+    .from(products)
+    .where(eq(products.status, "active"))
+    .groupBy(products.brandId)
+    .all();
+  return new Map(agg.map((a) => [a.brandId, a.n]));
 }
 
 export async function listBrandsAdmin(): Promise<BrandRow[]> {
-  await connectDB();
-  const [brands, counts] = await Promise.all([
-    Brand.find({}).sort({ name: 1 }).lean(),
+  const [brs, counts] = await Promise.all([
+    db().select().from(brands).orderBy(asc(brands.name)).all(),
     productCountsByBrand(),
   ]);
-  return brands.map((b) => ({
-    id: String(b._id),
+  return brs.map((b) => ({
+    id: b.id,
     name: b.name,
     slug: b.slug,
     description: b.description ?? null,
     logo: b.logo ?? null,
     isActive: b.isActive !== false,
-    productCount: counts.get(String(b._id)) ?? 0,
+    productCount: counts.get(b.id) ?? 0,
   }));
 }
 
 export async function getBrandAdmin(id: string): Promise<AdminBrandInput | null> {
-  await connectDB();
-  const b = await Brand.findById(id).lean();
+  const b = await db().select().from(brands).where(eq(brands.id, id)).get();
   if (!b) return null;
   return {
     name: b.name,
@@ -54,34 +54,46 @@ export async function getBrandAdmin(id: string): Promise<AdminBrandInput | null>
 }
 
 async function assertUniqueSlug(slug: string, excludeId?: string) {
-  const existing = await Brand.findOne({ slug }).select("_id").lean();
-  if (existing && String(existing._id) !== excludeId) {
+  const existing = await db().select({ id: brands.id }).from(brands).where(eq(brands.slug, slug)).get();
+  if (existing && existing.id !== excludeId) {
     throw new AdminError("Another brand already uses that slug.", 409);
   }
 }
 
+function mapInput(input: AdminBrandInput) {
+  return {
+    name: input.name,
+    slug: input.slug,
+    description: input.description ?? "",
+    logo: input.logo ?? "",
+    isActive: input.isActive ?? true,
+    seo: { title: input.seo?.title ?? "", description: input.seo?.description ?? "" },
+  };
+}
+
 export async function createBrand(input: AdminBrandInput): Promise<string> {
-  await connectDB();
   await assertUniqueSlug(input.slug);
-  const doc = await Brand.create({ ...input, isActive: input.isActive ?? true });
-  return String(doc._id);
+  const [row] = await db().insert(brands).values(mapInput(input)).returning({ id: brands.id });
+  return row.id;
 }
 
 export async function updateBrand(id: string, input: AdminBrandInput): Promise<void> {
-  await connectDB();
   await assertUniqueSlug(input.slug, id);
-  const res = await Brand.updateOne({ _id: id }, { $set: input });
-  if (res.matchedCount === 0) throw new AdminError("Brand not found.", 404);
+  const res = await db()
+    .update(brands)
+    .set(mapInput(input))
+    .where(eq(brands.id, id))
+    .returning({ id: brands.id });
+  if (res.length === 0) throw new AdminError("Brand not found.", 404);
 }
 
 export async function deleteBrand(id: string): Promise<void> {
-  await connectDB();
-  const inUse = await Product.countDocuments({ brand: id });
-  if (inUse > 0) {
+  const inUse = await db().select({ n: count() }).from(products).where(eq(products.brandId, id)).get();
+  if ((inUse?.n ?? 0) > 0) {
     throw new AdminError(
-      `Can't delete — ${inUse} product${inUse === 1 ? "" : "s"} still use this brand.`,
+      `Can't delete — ${inUse!.n} product${inUse!.n === 1 ? "" : "s"} still use this brand.`,
       409
     );
   }
-  await Brand.deleteOne({ _id: id });
+  await db().delete(brands).where(eq(brands.id, id));
 }

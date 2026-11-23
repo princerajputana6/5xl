@@ -1,8 +1,6 @@
-import type { QueryFilter } from "mongoose";
-import { connectDB } from "@/server/db";
-import { Product, type ProductDoc } from "@/server/models/Product";
-import { Category } from "@/server/models/Category";
-import { Brand } from "@/server/models/Brand";
+import { and, asc, count, desc, eq, gte, inArray, like, lte, max, min, ne, or, sql } from "drizzle-orm";
+import { db } from "@/server/db";
+import { products, brands, categories } from "@/server/schema";
 import type {
   ProductCardDTO,
   ProductDetailDTO,
@@ -14,8 +12,6 @@ import { productFamilyKey, parseFlavour, parseSize } from "@/lib/product-options
 
 const PAGE_SIZE = 12;
 
-type PopulatedRef = { name?: string; slug?: string } | null | undefined;
-
 /**
  * The imported catalogue's supplier brand doc ("Beastlife") gets restored by
  * the external import job on every reseed, so renaming it in the database
@@ -23,29 +19,68 @@ type PopulatedRef = { name?: string; slug?: string } | null | undefined;
  * is normalized here instead — the one place every listing/detail view reads
  * brandName from.
  */
-function displayBrandName(rawName: string | undefined): string | null {
+function displayBrandName(rawName: string | null | undefined): string | null {
   return rawName ? "5XL Nutrition" : null;
 }
 
-function toCardDTO(p: Record<string, unknown>): ProductCardDTO {
-  const brand = p.brand as PopulatedRef;
-  const category = p.category as PopulatedRef;
-  const images = (p.images as string[]) ?? [];
+/** Columns needed to render a product card, with brand name + category slug joined. */
+const cardColumns = {
+  id: products.id,
+  name: products.name,
+  slug: products.slug,
+  images: products.images,
+  price: products.price,
+  mrp: products.mrp,
+  rating: products.rating,
+  reviewCount: products.reviewCount,
+  shortDescription: products.shortDescription,
+  isBestseller: products.isBestseller,
+  stock: products.stock,
+  brandName: brands.name,
+  categorySlug: categories.slug,
+} as const;
+
+type CardRow = {
+  id: string;
+  name: string;
+  slug: string;
+  images: string[];
+  price: number;
+  mrp: number;
+  rating: number;
+  reviewCount: number;
+  shortDescription: string | null;
+  isBestseller: boolean;
+  stock: number;
+  brandName: string | null;
+  categorySlug: string | null;
+};
+
+function toCardDTO(p: CardRow): ProductCardDTO {
   return {
-    id: String(p._id),
-    name: p.name as string,
-    slug: p.slug as string,
-    image: images[0] ?? null,
-    price: p.price as number,
-    mrp: p.mrp as number,
-    rating: (p.rating as number) ?? 0,
-    reviewCount: (p.reviewCount as number) ?? 0,
-    brandName: displayBrandName(brand?.name),
-    categorySlug: category?.slug ?? null,
-    shortDescription: p.shortDescription as string | undefined,
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    image: p.images?.[0] ?? null,
+    price: p.price,
+    mrp: p.mrp,
+    rating: p.rating ?? 0,
+    reviewCount: p.reviewCount ?? 0,
+    brandName: displayBrandName(p.brandName),
+    categorySlug: p.categorySlug ?? null,
+    shortDescription: p.shortDescription ?? undefined,
     isBestseller: Boolean(p.isBestseller),
-    inStock: ((p.stock as number) ?? 0) > 0,
+    inStock: (p.stock ?? 0) > 0,
   };
+}
+
+/** A card-shaped SELECT joined to brand + category (reused across queries). */
+function cardQuery() {
+  return db()
+    .select(cardColumns)
+    .from(products)
+    .leftJoin(brands, eq(products.brandId, brands.id))
+    .leftJoin(categories, eq(products.categoryId, categories.id));
 }
 
 export type ListParams = {
@@ -60,46 +95,43 @@ export type ListParams = {
 };
 
 export async function listProducts(params: ListParams): Promise<ListResult> {
-  await connectDB();
-
-  const filter: QueryFilter<ProductDoc> = { status: "active" };
+  const conds = [eq(products.status, "active")];
 
   if (params.category) {
-    const cat = await Category.findOne({ slug: params.category }).select("_id").lean();
-    if (cat) filter.category = cat._id;
-    else return emptyResult(params.page);
+    const cat = await db()
+      .select({ id: categories.id })
+      .from(categories)
+      .where(eq(categories.slug, params.category))
+      .get();
+    if (!cat) return emptyResult(params.page);
+    conds.push(eq(products.categoryId, cat.id));
   }
   if (params.brand) {
-    const brand = await Brand.findOne({ slug: params.brand }).select("_id").lean();
-    if (brand) filter.brand = brand._id;
-    else return emptyResult(params.page);
+    const brand = await db()
+      .select({ id: brands.id })
+      .from(brands)
+      .where(eq(brands.slug, params.brand))
+      .get();
+    if (!brand) return emptyResult(params.page);
+    conds.push(eq(products.brandId, brand.id));
   }
-  if (params.goal) filter.goals = params.goal;
-  if (params.q) filter.$text = { $search: params.q };
-  if (params.minPrice != null || params.maxPrice != null) {
-    const price: { $gte?: number; $lte?: number } = {};
-    if (params.minPrice != null) price.$gte = params.minPrice;
-    if (params.maxPrice != null) price.$lte = params.maxPrice;
-    filter.price = price;
-  }
+  if (params.goal) conds.push(jsonArrayHas(products.goals, params.goal));
+  if (params.q) conds.push(textSearch(params.q));
+  if (params.minPrice != null) conds.push(gte(products.price, params.minPrice));
+  if (params.maxPrice != null) conds.push(lte(products.price, params.maxPrice));
 
-  const sort = sortToMongo(params.sort);
+  const where = and(...conds);
   const page = Math.max(1, params.page ?? 1);
-  const skip = (page - 1) * PAGE_SIZE;
+  const offset = (page - 1) * PAGE_SIZE;
 
-  const [docs, total] = await Promise.all([
-    Product.find(filter)
-      .populate("brand", "name slug")
-      .populate("category", "name slug")
-      .sort(sort)
-      .skip(skip)
-      .limit(PAGE_SIZE)
-      .lean(),
-    Product.countDocuments(filter),
+  const [rows, totalRow] = await Promise.all([
+    cardQuery().where(where).orderBy(...sortOrder(params.sort)).limit(PAGE_SIZE).offset(offset).all(),
+    db().select({ n: count() }).from(products).where(where).get(),
   ]);
 
+  const total = totalRow?.n ?? 0;
   return {
-    items: docs.map(toCardDTO),
+    items: (rows as CardRow[]).map(toCardDTO),
     total,
     page,
     pages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
@@ -111,41 +143,71 @@ function emptyResult(page = 1): ListResult {
   return { items: [], total: 0, page, pages: 1, pageSize: PAGE_SIZE };
 }
 
-function sortToMongo(sort?: SortValue): Record<string, 1 | -1> {
+/** SQLite `json_each` membership test for a JSON string[] column. */
+function jsonArrayHas(column: typeof products.goals | typeof products.tags, value: string) {
+  return sql`EXISTS (SELECT 1 FROM json_each(${column}) WHERE value = ${value})`;
+}
+
+/** Catalogue search across name / short description / tags. */
+function textSearch(q: string) {
+  const term = `%${q.trim()}%`;
+  return or(
+    like(products.name, term),
+    like(products.shortDescription, term),
+    like(products.tags, term)
+  )!;
+}
+
+function sortOrder(sort?: SortValue) {
   switch (sort) {
     case "price-asc":
-      return { price: 1 };
+      return [asc(products.price)];
     case "price-desc":
-      return { price: -1 };
+      return [desc(products.price)];
     case "rating":
-      return { rating: -1, reviewCount: -1 };
+      return [desc(products.rating), desc(products.reviewCount)];
     case "newest":
-      return { createdAt: -1 };
+      return [desc(products.createdAt)];
     default:
-      return { isBestseller: -1, rating: -1 };
+      return [desc(products.isBestseller), desc(products.rating)];
   }
 }
 
 export async function getProductBySlug(slug: string): Promise<ProductDetailDTO | null> {
-  await connectDB();
-  const p = await Product.findOne({ slug, status: "active" })
-    .populate("brand", "name slug")
-    .populate("category", "name slug")
-    .lean();
+  const p = await db()
+    .select({
+      ...cardColumns,
+      sku: products.sku,
+      description: products.description,
+      gstPct: products.gstPct,
+      variants: products.variants,
+      nutritionFacts: products.nutritionFacts,
+      ingredients: products.ingredients,
+      benefits: products.benefits,
+      keyBenefits: products.keyBenefits,
+      usage: products.usage,
+      tags: products.tags,
+      goals: products.goals,
+      brandSlug: brands.slug,
+      categoryName: categories.name,
+    })
+    .from(products)
+    .leftJoin(brands, eq(products.brandId, brands.id))
+    .leftJoin(categories, eq(products.categoryId, categories.id))
+    .where(and(eq(products.slug, slug), eq(products.status, "active")))
+    .get();
   if (!p) return null;
 
-  const brand = p.brand as PopulatedRef;
-  const category = p.category as PopulatedRef;
-  const card = toCardDTO(p as Record<string, unknown>);
+  const card = toCardDTO(p as unknown as CardRow);
 
   return {
     ...card,
     sku: p.sku,
     description: p.description ?? undefined,
-    images: (p.images as string[]) ?? [],
+    images: p.images ?? [],
     gstPct: p.gstPct ?? 18,
     variants: (p.variants ?? []).map((v, i) => ({
-      id: v._id ? String(v._id) : `${p.slug}-v${i}`,
+      id: v.id || `${p.slug}-v${i}`,
       label: v.label,
       flavour: v.flavour ?? undefined,
       size: v.size ?? undefined,
@@ -157,16 +219,16 @@ export async function getProductBySlug(slug: string): Promise<ProductDetailDTO |
     nutritionFacts: (p.nutritionFacts ?? []).map((n) => ({ label: n.label, value: n.value })),
     ingredients: p.ingredients ?? [],
     benefits: p.benefits ?? [],
-    keyBenefits: ((p.keyBenefits as { title?: string; description?: string; images?: string[] }[] | undefined) ?? []).map((k) => ({
+    keyBenefits: (p.keyBenefits ?? []).map((k) => ({
       title: k.title ?? "",
       description: k.description ?? "",
-      images: (k.images as string[]) ?? [],
+      images: k.images ?? [],
     })),
     usage: p.usage ?? undefined,
     tags: p.tags ?? [],
     goals: p.goals ?? [],
-    brandSlug: brand?.slug ?? null,
-    categoryName: category?.name ?? null,
+    brandSlug: p.brandSlug ?? null,
+    categoryName: p.categoryName ?? null,
   };
 }
 
@@ -175,28 +237,31 @@ export async function getRelatedProducts(
   categorySlug: string | null,
   limit = 4
 ): Promise<ProductCardDTO[]> {
-  await connectDB();
   if (!categorySlug) return [];
-  const cat = await Category.findOne({ slug: categorySlug }).select("_id").lean();
+  const cat = await db()
+    .select({ id: categories.id })
+    .from(categories)
+    .where(eq(categories.slug, categorySlug))
+    .get();
   if (!cat) return [];
-  const docs = await Product.find({ category: cat._id, slug: { $ne: slug }, status: "active" })
-    .populate("brand", "name slug")
-    .populate("category", "name slug")
-    .sort({ rating: -1 })
+  const rows = await cardQuery()
+    .where(
+      and(eq(products.categoryId, cat.id), ne(products.slug, slug), eq(products.status, "active"))
+    )
+    .orderBy(desc(products.rating))
     .limit(limit)
-    .lean();
-  return docs.map(toCardDTO);
+    .all();
+  return (rows as CardRow[]).map(toCardDTO);
 }
 
 async function findByFlag(flag: "isFeatured" | "isBestseller", limit: number) {
-  await connectDB();
-  const docs = await Product.find({ [flag]: true, status: "active" })
-    .populate("brand", "name slug")
-    .populate("category", "name slug")
-    .sort({ rating: -1 })
+  const col = flag === "isFeatured" ? products.isFeatured : products.isBestseller;
+  const rows = await cardQuery()
+    .where(and(eq(col, true), eq(products.status, "active")))
+    .orderBy(desc(products.rating))
     .limit(limit)
-    .lean();
-  return docs.map(toCardDTO);
+    .all();
+  return (rows as CardRow[]).map(toCardDTO);
 }
 
 export const getFeaturedProducts = (limit = 8) => findByFlag("isFeatured", limit);
@@ -206,15 +271,11 @@ export const getBestsellers = (limit = 8) => findByFlag("isBestseller", limit);
 export async function getProductsBySlugs(slugs: string[]): Promise<ProductCardDTO[]> {
   const wanted = slugs.filter(Boolean);
   if (wanted.length === 0) return [];
-  await connectDB();
-  const docs = await Product.find({ slug: { $in: wanted }, status: "active" })
-    .populate("brand", "name slug")
-    .populate("category", "name slug")
-    .lean();
-  const bySlug = new Map(docs.map((d) => [String(d.slug), toCardDTO(d)]));
-  return wanted
-    .map((s) => bySlug.get(s))
-    .filter((p): p is ProductCardDTO => Boolean(p));
+  const rows = await cardQuery()
+    .where(and(inArray(products.slug, wanted), eq(products.status, "active")))
+    .all();
+  const bySlug = new Map((rows as CardRow[]).map((d) => [d.slug, toCardDTO(d)]));
+  return wanted.map((s) => bySlug.get(s)).filter((p): p is ProductCardDTO => Boolean(p));
 }
 
 /** Active products within a category (by slug), newest first. */
@@ -223,26 +284,29 @@ export async function getProductsByCategorySlug(
   limit = 8
 ): Promise<ProductCardDTO[]> {
   if (!slug) return [];
-  await connectDB();
-  const cat = await Category.findOne({ slug }).select("_id").lean();
+  const cat = await db()
+    .select({ id: categories.id })
+    .from(categories)
+    .where(eq(categories.slug, slug))
+    .get();
   if (!cat) return [];
-  const docs = await Product.find({ category: cat._id, status: "active" })
-    .populate("brand", "name slug")
-    .populate("category", "name slug")
-    .sort({ createdAt: -1 })
+  const rows = await cardQuery()
+    .where(and(eq(products.categoryId, cat.id), eq(products.status, "active")))
+    .orderBy(desc(products.createdAt))
     .limit(limit)
-    .lean();
-  return docs.map(toCardDTO);
+    .all();
+  return (rows as CardRow[]).map(toCardDTO);
 }
 
 /** Lightweight product list for admin pickers: `{ slug, name }`. */
 export async function listProductsForPicker(): Promise<{ slug: string; name: string }[]> {
-  await connectDB();
-  const docs = await Product.find({ status: "active" })
-    .select("slug name")
-    .sort({ name: 1 })
-    .lean();
-  return docs.map((d) => ({ slug: String(d.slug), name: String(d.name) }));
+  const rows = await db()
+    .select({ slug: products.slug, name: products.name })
+    .from(products)
+    .where(eq(products.status, "active"))
+    .orderBy(asc(products.name))
+    .all();
+  return rows.map((d) => ({ slug: d.slug, name: d.name }));
 }
 
 export type ProductOption = {
@@ -272,28 +336,34 @@ export async function getProductOptions(
   name: string,
   slug: string
 ): Promise<ProductOptions> {
-  await connectDB();
-
   const family = productFamilyKey(name);
   const currentFlavour = parseFlavour(name);
   const currentSize = parseSize(name);
 
-  const docs = await Product.find({
-    status: "active",
-    name: { $regex: `^${escapeRegex(family)}`, $options: "i" },
-  })
-    .select("name slug stock images price")
-    .limit(40)
-    .lean();
+  // Gather siblings sharing the same product-family prefix. D1 rejects long
+  // LIKE patterns ("pattern too complex"), and the family key can be ~50+ chars,
+  // so group in-JS over the (small) active catalogue instead of a prefix LIKE.
+  const all = await db()
+    .select({
+      name: products.name,
+      slug: products.slug,
+      stock: products.stock,
+      images: products.images,
+      price: products.price,
+    })
+    .from(products)
+    .where(eq(products.status, "active"))
+    .all();
+  const docs = all.filter((d) => productFamilyKey(d.name) === family).slice(0, 40);
 
   const flavours = new Map<string, ProductOption>();
   const sizes = new Map<string, ProductOption>();
 
   for (const d of docs) {
-    const inStock = ((d.stock as number) ?? 0) > 0;
+    const inStock = (d.stock ?? 0) > 0;
     const isCurrent = d.slug === slug;
-    const image = ((d.images as string[]) ?? [])[0] ?? null;
-    const price = (d.price as number) ?? null;
+    const image = (d.images ?? [])[0] ?? null;
+    const price = d.price ?? null;
 
     const flavour = parseFlavour(d.name);
     if (flavour && (!flavours.has(flavour) || isCurrent)) {
@@ -353,47 +423,44 @@ function pricePerKg(sizeLabel: string, price: number): number | null {
   return Math.round(price / kg);
 }
 
-function escapeRegex(s: string) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 export async function getFacets(): Promise<FacetDTO> {
-  await connectDB();
-  const [categories, brands, priceAgg] = await Promise.all([
-    Category.find({ isActive: true }).sort({ order: 1 }).lean(),
-    Brand.find({ isActive: true }).sort({ name: 1 }).lean(),
-    Product.aggregate<{ _id: null; min: number; max: number }>([
-      { $match: { status: "active" } },
-      { $group: { _id: null, min: { $min: "$price" }, max: { $max: "$price" } } },
-    ]),
+  const [cats, brs, priceAgg] = await Promise.all([
+    db().select().from(categories).where(eq(categories.isActive, true)).orderBy(asc(categories.order)).all(),
+    db().select().from(brands).where(eq(brands.isActive, true)).orderBy(asc(brands.name)).all(),
+    db()
+      .select({ min: min(products.price), max: max(products.price) })
+      .from(products)
+      .where(eq(products.status, "active"))
+      .get(),
   ]);
 
   return {
-    categories: categories.map((c) => ({ name: c.name, slug: c.slug, emoji: c.emoji ?? undefined })),
-    brands: brands.map((b) => ({ name: displayBrandName(b.name) ?? b.name, slug: b.slug })),
+    categories: cats.map((c) => ({ name: c.name, slug: c.slug, emoji: c.emoji ?? undefined })),
+    brands: brs.map((b) => ({ name: displayBrandName(b.name) ?? b.name, slug: b.slug })),
     priceRange: {
-      min: priceAgg[0]?.min ?? 0,
-      max: priceAgg[0]?.max ?? 5000,
+      min: priceAgg?.min ?? 0,
+      max: priceAgg?.max ?? 5000,
     },
   };
 }
 
 export async function listBrands() {
-  await connectDB();
-  const [brands, counts] = await Promise.all([
-    Brand.find({ isActive: true }).sort({ name: 1 }).lean(),
-    Product.aggregate<{ _id: string; count: number }>([
-      { $match: { status: "active" } },
-      { $group: { _id: "$brand", count: { $sum: 1 } } },
-    ]),
+  const [brs, counts] = await Promise.all([
+    db().select().from(brands).where(eq(brands.isActive, true)).orderBy(asc(brands.name)).all(),
+    db()
+      .select({ brandId: products.brandId, n: count() })
+      .from(products)
+      .where(eq(products.status, "active"))
+      .groupBy(products.brandId)
+      .all(),
   ]);
-  const countMap = new Map(counts.map((c) => [String(c._id), c.count]));
-  return brands.map((b) => ({
-    id: String(b._id),
+  const countMap = new Map(counts.map((c) => [c.brandId, c.n]));
+  return brs.map((b) => ({
+    id: b.id,
     name: displayBrandName(b.name) ?? b.name,
     slug: b.slug,
     description: b.description ?? null,
     logo: b.logo ?? null,
-    productCount: countMap.get(String(b._id)) ?? 0,
+    productCount: countMap.get(b.id) ?? 0,
   }));
 }

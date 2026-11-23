@@ -1,5 +1,6 @@
-import { connectDB } from "@/server/db";
-import { Product } from "@/server/models/Product";
+import { and, eq } from "drizzle-orm";
+import { db } from "@/server/db";
+import { products } from "@/server/schema";
 import { HttpError } from "@/server/errors";
 
 export type CartLineInput = {
@@ -9,7 +10,7 @@ export type CartLineInput = {
 };
 
 export type PricedLine = {
-  product: unknown;
+  product: string;
   slug: string;
   name: string;
   image: string | null;
@@ -29,16 +30,15 @@ export type PricedLine = {
 export async function priceCartItems(
   items: CartLineInput[]
 ): Promise<{ lines: PricedLine[]; subtotal: number }> {
-  await connectDB();
-
   const lines: PricedLine[] = [];
   let subtotal = 0;
 
   for (const line of items) {
-    const product = await Product.findOne({
-      _id: line.productId,
-      status: "active",
-    }).lean();
+    const product = await db()
+      .select()
+      .from(products)
+      .where(and(eq(products.id, line.productId), eq(products.status, "active")))
+      .get();
     if (!product) {
       throw new HttpError("A product in your cart is no longer available.", 409);
     }
@@ -49,9 +49,7 @@ export async function priceCartItems(
     let stock = product.stock ?? 0;
 
     if (line.variantId) {
-      const variant = (product.variants ?? []).find(
-        (v) => String((v as { _id?: unknown })._id) === line.variantId
-      );
+      const variant = (product.variants ?? []).find((v) => v.id === line.variantId);
       if (!variant) {
         throw new HttpError("A selected variant is no longer available.", 409);
       }
@@ -69,10 +67,10 @@ export async function priceCartItems(
     subtotal += lineTotal;
 
     lines.push({
-      product: product._id,
+      product: product.id,
       slug: product.slug,
       name: product.name,
-      image: (product.images as string[] | undefined)?.[0] ?? null,
+      image: (product.images ?? [])[0] ?? null,
       variantId: line.variantId ?? null,
       variantLabel,
       price,

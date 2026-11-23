@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import { Outfit, Barlow_Condensed } from "next/font/google";
+import { Poppins, Barlow_Condensed } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
@@ -8,9 +8,10 @@ import { siteConfig } from "@/lib/site";
 
 const GTM_ID = siteConfig.gtmId;
 
-/** Body copy: clean, modern geometric sans. */
-const outfit = Outfit({
+/** Body copy: Poppins — sans-serif, emphasis on Medium (500) / SemiBold (600). */
+const poppins = Poppins({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-sans",
   display: "swap",
 });
@@ -62,7 +63,7 @@ export default function RootLayout({
         )}
       </head>
       <body
-        className={`${outfit.variable} ${barlowCondensed.variable} min-h-dvh antialiased`}
+        className={`${poppins.variable} ${barlowCondensed.variable} min-h-dvh antialiased`}
       >
         {GTM_ID && (
           <noscript>

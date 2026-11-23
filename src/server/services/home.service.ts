@@ -1,5 +1,6 @@
-import { connectDB } from "@/server/db";
-import { HomeContent } from "@/server/models/HomeContent";
+import { eq } from "drizzle-orm";
+import { db } from "@/server/db";
+import { homeContent } from "@/server/schema";
 import type { HomeContentInput } from "@/lib/validators/cms";
 
 export type CardItemDTO = {
@@ -250,9 +251,8 @@ function toDTO(doc: Record<string, unknown> | null): HomeContentDTO {
 
 /** Storefront read — always returns a complete, render-ready object. */
 export async function getHomeContent(): Promise<HomeContentDTO> {
-  await connectDB();
-  const doc = await HomeContent.findOne({ key: "home" }).lean();
-  return toDTO(doc as Record<string, unknown> | null);
+  const doc = await db().select().from(homeContent).where(eq(homeContent.key, "home")).get();
+  return toDTO((doc as Record<string, unknown> | undefined) ?? null);
 }
 
 /** Admin read — the raw stored values (falls back to defaults for editing). */
@@ -261,10 +261,9 @@ export async function getHomeContentForAdmin(): Promise<HomeContentDTO> {
 }
 
 export async function saveHomeContent(input: HomeContentInput): Promise<void> {
-  await connectDB();
-  await HomeContent.updateOne(
-    { key: "home" },
-    { $set: { ...input, key: "home" } },
-    { upsert: true }
-  );
+  const data = { ...input } as Partial<typeof homeContent.$inferInsert>;
+  await db()
+    .insert(homeContent)
+    .values({ ...data, key: "home" } as typeof homeContent.$inferInsert)
+    .onConflictDoUpdate({ target: homeContent.key, set: data });
 }

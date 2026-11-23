@@ -1,16 +1,16 @@
-import { connectDB } from "@/server/db";
-import { User } from "@/server/models/User";
-import { WalletTransaction, type WalletTransactionDoc } from "@/server/models/WalletTransaction";
+import { desc, eq, sql } from "drizzle-orm";
+import { db } from "@/server/db";
+import { users, walletTransactions } from "@/server/schema";
 import { pointsEarnedFor } from "@/lib/cart-pricing";
 import { HttpError } from "@/server/errors";
 
 type Kind = "points" | "wallet";
 type TxnType = "earn" | "redeem" | "refund" | "adjust";
 
-const FIELD: Record<Kind, "rewardPoints" | "walletBalance"> = {
-  points: "rewardPoints",
-  wallet: "walletBalance",
-};
+const COLUMN = {
+  points: users.rewardPoints,
+  wallet: users.walletBalance,
+} as const;
 
 export type WalletTxnDTO = {
   id: string;
@@ -29,7 +29,7 @@ export type WalletState = {
   transactions: WalletTxnDTO[];
 };
 
-/** Apply a signed delta to a balance and append a ledger entry. */
+/** Apply a signed delta to a balance (clamped at 0) and append a ledger entry. */
 async function record(
   userId: string,
   kind: Kind,
@@ -39,28 +39,18 @@ async function record(
   orderNumber?: string
 ): Promise<void> {
   if (amount === 0) return;
-  await connectDB();
-  const field = FIELD[kind];
-  // Clamp so balances never go negative.
-  const user = await User.findByIdAndUpdate(
+  const col = COLUMN[kind];
+  // Clamp so balances never go negative, in a single statement, returning the
+  // new balance.
+  const updated = await db()
+    .update(users)
+    .set({ [kind === "points" ? "rewardPoints" : "walletBalance"]: sql`MAX(0, ${col} + ${amount})` })
+    .where(eq(users.id, userId))
+    .returning({ balanceAfter: col });
+  if (updated.length === 0) throw new HttpError("User not found.", 404);
+  const balanceAfter = updated[0].balanceAfter ?? 0;
+  await db().insert(walletTransactions).values({
     userId,
-    [
-      {
-        $set: {
-          [field]: {
-            $max: [0, { $add: [{ $ifNull: [`$${field}`, 0] }, amount] }],
-          },
-        },
-      },
-    ],
-    { new: true }
-  )
-    .select(field)
-    .lean();
-  if (!user) throw new HttpError("User not found.", 404);
-  const balanceAfter = (user as unknown as Record<string, number>)[field] ?? 0;
-  await WalletTransaction.create({
-    user: userId,
     kind,
     type,
     amount,
@@ -103,16 +93,25 @@ export async function adjustBalance(
 }
 
 export async function getWalletState(userId: string): Promise<WalletState> {
-  await connectDB();
   const [user, txns] = await Promise.all([
-    User.findById(userId).select("rewardPoints walletBalance").lean(),
-    WalletTransaction.find({ user: userId }).sort({ createdAt: -1 }).limit(50).lean(),
+    db()
+      .select({ rewardPoints: users.rewardPoints, walletBalance: users.walletBalance })
+      .from(users)
+      .where(eq(users.id, userId))
+      .get(),
+    db()
+      .select()
+      .from(walletTransactions)
+      .where(eq(walletTransactions.userId, userId))
+      .orderBy(desc(walletTransactions.createdAt))
+      .limit(50)
+      .all(),
   ]);
   return {
     rewardPoints: user?.rewardPoints ?? 0,
     walletBalance: user?.walletBalance ?? 0,
-    transactions: (txns as unknown as WalletTransactionDoc[]).map((t) => ({
-      id: String(t._id),
+    transactions: txns.map((t) => ({
+      id: t.id,
       kind: t.kind as Kind,
       type: t.type as TxnType,
       amount: t.amount,
@@ -125,7 +124,10 @@ export async function getWalletState(userId: string): Promise<WalletState> {
 }
 
 export async function getRewardPoints(userId: string): Promise<number> {
-  await connectDB();
-  const user = await User.findById(userId).select("rewardPoints").lean();
+  const user = await db()
+    .select({ rewardPoints: users.rewardPoints })
+    .from(users)
+    .where(eq(users.id, userId))
+    .get();
   return user?.rewardPoints ?? 0;
 }

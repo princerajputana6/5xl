@@ -14,6 +14,24 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  // Cloudflare D1 (SQLite) — the application database (Drizzle ORM).
+  // For local dev the id can be any string; replace it with the real id from
+  // `wrangler d1 create fivexl` before the first `--remote` command / deploy.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "fivexl",
+      "database_id": "e270df69-1887-4946-a38c-4b01b3d7ac47",
+      "migrations_dir": "drizzle"
+    }
+  ],
+  // R2 bucket for admin-uploaded product / CMS media, served via /api/media/<key>.
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "5xl-media"
+    }
+  ],
   "observability": {
     "enabled": true
   }

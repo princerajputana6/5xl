@@ -2,11 +2,10 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "5xl-dev",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 3000,
-      "autoPort": true
+      "name": "cf-preview",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["wrangler", "dev", "--port", "8799"],
+      "port": 8799
     }
   ]
 }
