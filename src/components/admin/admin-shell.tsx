@@ -22,6 +22,7 @@ import {
   Moon,
 } from "lucide-react";
 import type { Permission } from "@/server/rbac";
+import { Logo } from "@/components/shared/logo";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -177,15 +178,12 @@ export function AdminShell({
   );
 
   const brand = (
-    <Link href="/admin" className="flex items-center gap-2.5">
-      <span className="grid size-9 place-items-center rounded-xl bg-foreground text-sm font-black tracking-tight text-background admin-gold-glow">
-        5<span className="text-primary">XL</span>
+    <div className="flex items-center gap-2">
+      <Logo href="/admin" />
+      <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-[0.62rem] font-bold uppercase tracking-widest text-primary">
+        Admin
       </span>
-      <span className="flex flex-col leading-none">
-        <span className="text-sm font-bold tracking-tight">5XL Nutrition</span>
-        <span className="text-[0.68rem] font-medium text-muted-foreground">Admin console</span>
-      </span>
-    </Link>
+    </div>
   );
 
   const themeButton = (
