@@ -18,7 +18,7 @@ export default async function NewProductPage() {
       >
         <ArrowLeft className="size-4" /> Back to products
       </Link>
-      <h1 className="font-display text-3xl font-extrabold uppercase tracking-tight">New product</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">New product</h1>
       <ProductForm brands={brands} categories={categories} />
     </div>
   );

@@ -1,6 +1,7 @@
 import { requirePermission } from "@/lib/session";
 import { listCustomers } from "@/server/services/admin.service";
 import { formatINR, formatDate } from "@/lib/format";
+import { Pagination } from "@/components/ui/pagination";
 
 export const metadata = { title: "Customers" };
 
@@ -11,12 +12,15 @@ export default async function AdminCustomersPage({
 }) {
   await requirePermission("customers:read");
   const { page } = await searchParams;
-  const { rows, total } = await listCustomers({ page: Number(page) || 1, pageSize: 50 });
+  const { rows, total, page: current, pages } = await listCustomers({
+    page: Number(page) || 1,
+    pageSize: 25,
+  });
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-extrabold uppercase tracking-tight">Customers</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Customers</h1>
         <p className="text-sm text-muted-foreground">{total} customer(s)</p>
       </div>
 
@@ -55,6 +59,8 @@ export default async function AdminCustomersPage({
           </tbody>
         </table>
       </div>
+
+      <Pagination page={current} pages={pages} total={total} />
     </div>
   );
 }

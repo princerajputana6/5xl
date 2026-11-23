@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { usePathname } from "next/navigation";
 
 /**
  * Custom, gym-themed pointer for fine-pointer devices:
@@ -20,10 +21,17 @@ export function ProteinCursor() {
   const ringRef = React.useRef<HTMLDivElement>(null);
   const sparksRef = React.useRef<HTMLDivElement>(null);
 
+  const pathname = usePathname();
+
   React.useEffect(() => {
     const fine = window.matchMedia("(pointer: fine)").matches;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!fine || reduced) return;
+    // The custom gym cursor is a storefront flourish; the admin uses the OS pointer.
+    if (!fine || reduced || pathname.startsWith("/admin")) {
+      setEnabled(false);
+      document.documentElement.classList.remove("has-custom-cursor");
+      return;
+    }
 
     setEnabled(true);
     document.documentElement.classList.add("has-custom-cursor");
@@ -124,7 +132,7 @@ export function ProteinCursor() {
       document.removeEventListener("mouseenter", onEnter);
       document.documentElement.classList.remove("has-custom-cursor", "cursor-visible");
     };
-  }, []);
+  }, [pathname]);
 
   if (!enabled) return null;
 

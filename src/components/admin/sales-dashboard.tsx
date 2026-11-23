@@ -54,7 +54,7 @@ export function SalesDashboard({ report }: { report: SalesReport }) {
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-extrabold uppercase tracking-tight">
+          <h1 className="text-2xl font-semibold tracking-tight">
             Sales &amp; Analytics
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -127,7 +127,7 @@ export function SalesDashboard({ report }: { report: SalesReport }) {
 
       {/* Trend */}
       <section className="rounded-xl border border-border bg-card p-6">
-        <h2 className="font-display text-lg font-bold uppercase tracking-tight">
+        <h2 className="text-base font-semibold">
           Revenue trend
         </h2>
 
@@ -162,7 +162,7 @@ export function SalesDashboard({ report }: { report: SalesReport }) {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Top products */}
         <section className="rounded-xl border border-border bg-card p-6">
-          <h2 className="font-display text-lg font-bold uppercase tracking-tight">
+          <h2 className="text-base font-semibold">
             Top products
           </h2>
           {topProducts.length === 0 ? (
@@ -187,7 +187,7 @@ export function SalesDashboard({ report }: { report: SalesReport }) {
 
         {/* Status mix */}
         <section className="rounded-xl border border-border bg-card p-6">
-          <h2 className="font-display text-lg font-bold uppercase tracking-tight">
+          <h2 className="text-base font-semibold">
             Order status mix
           </h2>
           {statusBreakdown.length === 0 ? (
@@ -222,7 +222,7 @@ export function SalesDashboard({ report }: { report: SalesReport }) {
       {/* Coupons */}
       {coupons.length > 0 && (
         <section className="rounded-xl border border-border bg-card p-6">
-          <h2 className="flex items-center gap-2 font-display text-lg font-bold uppercase tracking-tight">
+          <h2 className="flex items-center gap-2 text-base font-semibold">
             <Tag className="size-4 text-primary" />
             Coupon performance
           </h2>

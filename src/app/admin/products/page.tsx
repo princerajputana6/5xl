@@ -9,6 +9,7 @@ import {
 import { hasPermission, type Role } from "@/server/rbac";
 import { formatINR } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/pagination";
 import { ProductStatusSelect } from "@/components/admin/product-status-select";
 import { ProductFilters } from "@/components/admin/product-filters";
 import { ProductImage } from "@/components/shop/product-image";
@@ -16,7 +17,7 @@ import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Products" };
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 24;
 
 export default async function AdminProductsPage({
   searchParams,
@@ -61,20 +62,11 @@ export default async function AdminProductsPage({
       [status, stock, brand, category, flag].some((v) => v && v !== "all")
   );
 
-  const pageHref = (n: number) => {
-    const qs = new URLSearchParams();
-    for (const [key, value] of Object.entries({ q, status, stock, brand, category, flag, sort })) {
-      if (value && value !== "all") qs.set(key, value);
-    }
-    if (n > 1) qs.set("page", String(n));
-    return `/admin/products${qs.toString() ? `?${qs}` : ""}`;
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-extrabold uppercase tracking-tight">
+          <h1 className="text-2xl font-semibold tracking-tight">
             Products
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -227,31 +219,7 @@ export default async function AdminProductsPage({
             </table>
           </div>
 
-          {pages > 1 && (
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-muted-foreground">
-                Page {current} of {pages}
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  asChild={current > 1}
-                  variant="outline"
-                  size="sm"
-                  disabled={current <= 1}
-                >
-                  {current > 1 ? <Link href={pageHref(current - 1)}>Previous</Link> : <span>Previous</span>}
-                </Button>
-                <Button
-                  asChild={current < pages}
-                  variant="outline"
-                  size="sm"
-                  disabled={current >= pages}
-                >
-                  {current < pages ? <Link href={pageHref(current + 1)}>Next</Link> : <span>Next</span>}
-                </Button>
-              </div>
-            </div>
-          )}
+          <Pagination page={current} pages={pages} total={total} />
         </>
       )}
     </div>

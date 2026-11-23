@@ -64,7 +64,7 @@ function Section({
           <Icon className="size-4 text-primary" />
         </span>
         <div>
-          <h2 className="font-display text-base font-bold uppercase tracking-tight">{title}</h2>
+          <h2 className="text-sm font-semibold">{title}</h2>
           {description && (
             <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
           )}

@@ -136,9 +136,25 @@ export async function listRelatedPosts(
 
 /* ------------------------------ admin ------------------------------ */
 
-export async function listPostsAdmin(): Promise<PostAdminRow[]> {
-  const docs = await db().select().from(posts).orderBy(desc(posts.updatedAt)).all();
-  return docs.map((p) => ({
+export async function listPostsAdmin(
+  params: { page?: number; pageSize?: number } = {}
+): Promise<{ rows: PostAdminRow[]; total: number; page: number; pages: number }> {
+  const page = Math.max(1, params.page ?? 1);
+  const pageSize = params.pageSize ?? 20;
+
+  const [docs, totalRow] = await Promise.all([
+    db()
+      .select()
+      .from(posts)
+      .orderBy(desc(posts.updatedAt))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize)
+      .all(),
+    db().select({ n: count() }).from(posts).get(),
+  ]);
+
+  const total = totalRow?.n ?? 0;
+  const rows: PostAdminRow[] = docs.map((p) => ({
     id: p.id,
     title: p.title,
     slug: p.slug,
@@ -147,6 +163,7 @@ export async function listPostsAdmin(): Promise<PostAdminRow[]> {
     publishedAt: p.publishedAt ? new Date(p.publishedAt).toISOString() : null,
     updatedAt: p.updatedAt ? new Date(p.updatedAt).toISOString() : "",
   }));
+  return { rows, total, page, pages: Math.max(1, Math.ceil(total / pageSize)) };
 }
 
 export async function getPostAdmin(id: string): Promise<(BlogPostInput & { id: string }) | null> {

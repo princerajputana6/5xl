@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requirePermission } from "@/lib/session";
 import { listAllReviews } from "@/server/services/review.service";
 import { ReviewsModerationClient } from "@/components/admin/reviews-moderation-client";
+import { Pagination } from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Reviews" };
@@ -16,16 +17,19 @@ const FILTERS = [
 export default async function AdminReviewsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; page?: string }>;
 }) {
   await requirePermission("cms:write");
-  const { status = "all" } = await searchParams;
-  const { rows, total } = await listAllReviews({ status });
+  const { status = "all", page } = await searchParams;
+  const { rows, total, page: current, pages } = await listAllReviews({
+    status,
+    page: Number(page) || 1,
+  });
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-extrabold uppercase tracking-tight">Reviews</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Reviews</h1>
         <p className="text-sm text-muted-foreground">{total} review(s)</p>
       </div>
 
@@ -47,6 +51,8 @@ export default async function AdminReviewsPage({
       </div>
 
       <ReviewsModerationClient reviews={rows} />
+
+      <Pagination page={current} pages={pages} total={total} />
     </div>
   );
 }

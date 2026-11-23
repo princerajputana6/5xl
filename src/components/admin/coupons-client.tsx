@@ -87,7 +87,7 @@ export function CouponsClient({ coupons }: { coupons: AdminCouponRow[] }) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-extrabold uppercase tracking-tight">Coupons</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Coupons</h1>
           <p className="text-sm text-muted-foreground">{coupons.length} coupon(s)</p>
         </div>
         <Button onClick={() => setShowForm((v) => !v)}>

@@ -3,6 +3,7 @@ import { requirePermission } from "@/lib/session";
 import { listOrders } from "@/server/services/admin.service";
 import { formatINR, formatDate } from "@/lib/format";
 import { OrderStatusBadge } from "@/components/shop/order-status-badge";
+import { Pagination } from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Orders" };
@@ -32,7 +33,7 @@ export default async function AdminOrdersPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-extrabold uppercase tracking-tight">Orders</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Orders</h1>
         <p className="text-sm text-muted-foreground">{total} order(s)</p>
       </div>
 
@@ -109,22 +110,7 @@ export default async function AdminOrdersPage({
         </table>
       </div>
 
-      {pages > 1 && (
-        <div className="flex items-center justify-center gap-2 text-sm">
-          {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
-            <Link
-              key={p}
-              href={`/admin/orders?status=${status}&page=${p}`}
-              className={cn(
-                "rounded-md border px-3 py-1.5",
-                p === current ? "border-primary bg-primary text-primary-foreground" : "border-border"
-              )}
-            >
-              {p}
-            </Link>
-          ))}
-        </div>
-      )}
+      <Pagination page={current} pages={pages} total={total} />
     </div>
   );
 }
