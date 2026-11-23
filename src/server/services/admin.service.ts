@@ -1,12 +1,10 @@
-import { connectDB } from "@/server/db";
-import { Order, type OrderDoc } from "@/server/models/Order";
-import { Product } from "@/server/models/Product";
-import { User } from "@/server/models/User";
-import { Brand } from "@/server/models/Brand";
-import { Category } from "@/server/models/Category";
-import { toOrderDTO } from "@/server/services/order.service";
+import { and, asc, count, desc, eq, gt, inArray, like, lte, ne, or, sql } from "drizzle-orm";
+import { db } from "@/server/db";
+import { orders, products, users, brands, categories } from "@/server/schema";
+import { toOrderDTO, type OrderRecord } from "@/server/services/order.service";
 import type { OrderDTO, OrderStatus } from "@/types/order";
 import type { AdminProductInput } from "@/lib/validators/admin";
+import type { ProductVariant } from "@/server/schema";
 
 // ---- dashboard ---------------------------------------------------------
 
@@ -22,30 +20,30 @@ export type DashboardStats = {
 };
 
 export async function getDashboardStats(): Promise<DashboardStats> {
-  await connectDB();
-  const [revenueAgg, totalOrders, pendingOrders, products, customers, lowStock, recent] =
+  const [rev, totalOrders, pendingOrders, productCount, customers, lowStock, recent] =
     await Promise.all([
-      Order.aggregate<{ _id: null; revenue: number; count: number }>([
-        { $match: { "payment.status": "paid" } },
-        { $group: { _id: null, revenue: { $sum: "$amounts.total" }, count: { $sum: 1 } } },
-      ]),
-      Order.countDocuments({}),
-      Order.countDocuments({ status: "pending" }),
-      Product.countDocuments({}),
-      User.countDocuments({ role: "customer" }),
-      Product.countDocuments({ stock: { $lte: 5 } }),
-      Order.find({}).sort({ createdAt: -1 }).limit(6).populate("user", "name email").lean(),
+      db()
+        .select({ revenue: sql<number>`coalesce(sum(${orders.total}), 0)`, count: count() })
+        .from(orders)
+        .where(eq(orders.paymentStatus, "paid"))
+        .get(),
+      db().select({ n: count() }).from(orders).get(),
+      db().select({ n: count() }).from(orders).where(eq(orders.status, "pending")).get(),
+      db().select({ n: count() }).from(products).get(),
+      db().select({ n: count() }).from(users).where(eq(users.role, "customer")).get(),
+      db().select({ n: count() }).from(products).where(lte(products.stock, 5)).get(),
+      orderRowQuery().orderBy(desc(orders.createdAt)).limit(6).all(),
     ]);
 
   return {
-    revenue: revenueAgg[0]?.revenue ?? 0,
-    paidOrders: revenueAgg[0]?.count ?? 0,
-    totalOrders,
-    pendingOrders,
-    products,
-    customers,
-    lowStock,
-    recentOrders: recent.map((o) => toOrderRow(o as unknown as PopulatedOrder)),
+    revenue: rev?.revenue ?? 0,
+    paidOrders: rev?.count ?? 0,
+    totalOrders: totalOrders?.n ?? 0,
+    pendingOrders: pendingOrders?.n ?? 0,
+    products: productCount?.n ?? 0,
+    customers: customers?.n ?? 0,
+    lowStock: lowStock?.n ?? 0,
+    recentOrders: (recent as OrderJoinRow[]).map(toOrderRow),
   };
 }
 
@@ -63,19 +61,47 @@ export type AdminOrderRow = {
   placedAt: string;
 };
 
-type PopulatedOrder = OrderDoc & {
-  user?: { _id?: unknown; name?: string; email?: string } | null;
+type OrderJoinRow = {
+  id: string;
+  orderNumber: string;
+  total: number;
+  status: string;
+  paymentStatus: string;
+  items: OrderRecord["items"];
+  placedAt: Date;
+  createdAt: Date;
+  customerName: string | null;
+  customerEmail: string | null;
 };
 
-function toOrderRow(o: PopulatedOrder): AdminOrderRow {
+/** Order-list SELECT joined to the customer (name + email). */
+function orderRowQuery() {
+  return db()
+    .select({
+      id: orders.id,
+      orderNumber: orders.orderNumber,
+      total: orders.total,
+      status: orders.status,
+      paymentStatus: orders.paymentStatus,
+      items: orders.items,
+      placedAt: orders.placedAt,
+      createdAt: orders.createdAt,
+      customerName: users.name,
+      customerEmail: users.email,
+    })
+    .from(orders)
+    .leftJoin(users, eq(orders.userId, users.id));
+}
+
+function toOrderRow(o: OrderJoinRow): AdminOrderRow {
   return {
-    id: String(o._id),
+    id: o.id,
     orderNumber: o.orderNumber,
-    customerName: o.user?.name ?? "—",
-    customerEmail: o.user?.email ?? "—",
-    total: o.amounts?.total ?? 0,
+    customerName: o.customerName ?? "—",
+    customerEmail: o.customerEmail ?? "—",
+    total: o.total ?? 0,
     status: o.status as OrderStatus,
-    paymentStatus: o.payment?.status ?? "created",
+    paymentStatus: o.paymentStatus ?? "created",
     itemCount: o.items?.length ?? 0,
     placedAt: new Date(o.placedAt ?? o.createdAt).toISOString(),
   };
@@ -87,26 +113,27 @@ export async function listOrders(params: {
   page?: number;
   pageSize?: number;
 }): Promise<{ rows: AdminOrderRow[]; total: number; page: number; pages: number }> {
-  await connectDB();
   const page = Math.max(1, params.page ?? 1);
   const pageSize = params.pageSize ?? 20;
 
-  const filter: Record<string, unknown> = {};
-  if (params.status && params.status !== "all") filter.status = params.status;
-  if (params.q) filter.orderNumber = { $regex: params.q.trim(), $options: "i" };
+  const conds = [];
+  if (params.status && params.status !== "all") conds.push(eq(orders.status, params.status));
+  if (params.q) conds.push(like(orders.orderNumber, `%${params.q.trim()}%`));
+  const where = conds.length ? and(...conds) : undefined;
 
-  const [docs, total] = await Promise.all([
-    Order.find(filter)
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * pageSize)
+  const [rows, totalRow] = await Promise.all([
+    orderRowQuery()
+      .where(where)
+      .orderBy(desc(orders.createdAt))
       .limit(pageSize)
-      .populate("user", "name email")
-      .lean(),
-    Order.countDocuments(filter),
+      .offset((page - 1) * pageSize)
+      .all(),
+    db().select({ n: count() }).from(orders).where(where).get(),
   ]);
 
+  const total = totalRow?.n ?? 0;
   return {
-    rows: docs.map((o) => toOrderRow(o as unknown as PopulatedOrder)),
+    rows: (rows as OrderJoinRow[]).map(toOrderRow),
     total,
     page,
     pages: Math.max(1, Math.ceil(total / pageSize)),
@@ -118,15 +145,18 @@ export type AdminOrderDetail = OrderDTO & {
 };
 
 export async function getOrderForAdmin(id: string): Promise<AdminOrderDetail | null> {
-  await connectDB();
-  const doc = await Order.findById(id).populate("user", "name email").lean();
-  if (!doc) return null;
-  const populated = doc as unknown as PopulatedOrder;
+  const order = await db().select().from(orders).where(eq(orders.id, id)).get();
+  if (!order) return null;
+  const customer = await db()
+    .select({ name: users.name, email: users.email })
+    .from(users)
+    .where(eq(users.id, order.userId))
+    .get();
   return {
-    ...toOrderDTO(populated),
+    ...toOrderDTO(order),
     customer: {
-      name: populated.user?.name ?? "—",
-      email: populated.user?.email ?? "—",
+      name: customer?.name ?? "—",
+      email: customer?.email ?? "—",
     },
   };
 }
@@ -137,17 +167,18 @@ export async function updateOrderStatus(
   note: string | undefined,
   actor: string
 ): Promise<AdminOrderDetail | null> {
-  await connectDB();
-  const order = await Order.findById(id);
+  const order = await db().select().from(orders).where(eq(orders.id, id)).get();
   if (!order) return null;
 
-  order.status = status;
-  order.timeline.push({
-    status,
-    note: note?.trim() || `Status set to ${status} by ${actor}.`,
-    at: new Date(),
-  } as OrderDoc["timeline"][number]);
-  await order.save();
+  const timeline = [
+    ...(order.timeline ?? []),
+    {
+      status,
+      note: note?.trim() || `Status set to ${status} by ${actor}.`,
+      at: Date.now(),
+    },
+  ];
+  await db().update(orders).set({ status, timeline }).where(eq(orders.id, id));
 
   return getOrderForAdmin(id);
 }
@@ -190,6 +221,27 @@ export const PRODUCT_SORTS = {
 
 export type ProductSort = keyof typeof PRODUCT_SORTS;
 
+function productOrderBy(sort: ProductSort) {
+  switch (sort) {
+    case "oldest":
+      return [asc(products.createdAt)];
+    case "name-asc":
+      return [asc(products.name)];
+    case "name-desc":
+      return [desc(products.name)];
+    case "price-asc":
+      return [asc(products.price)];
+    case "price-desc":
+      return [desc(products.price)];
+    case "stock-asc":
+      return [asc(products.stock)];
+    case "stock-desc":
+      return [desc(products.stock)];
+    default:
+      return [desc(products.createdAt)];
+  }
+}
+
 export async function listAdminProducts(params: {
   q?: string;
   status?: string;
@@ -201,104 +253,110 @@ export async function listAdminProducts(params: {
   page?: number;
   pageSize?: number;
 }): Promise<{ rows: AdminProductRow[]; total: number; page: number; pages: number }> {
-  await connectDB();
   const page = Math.max(1, params.page ?? 1);
   const pageSize = params.pageSize ?? 20;
 
-  const filter: Record<string, unknown> = {};
-  if (params.status && params.status !== "all") filter.status = params.status;
-
+  const conds = [];
+  if (params.status && params.status !== "all") conds.push(eq(products.status, params.status));
   if (params.q) {
-    // Match the name or the SKU so admins can paste either.
-    const rx = { $regex: params.q.trim(), $options: "i" };
-    filter.$or = [{ name: rx }, { sku: rx }];
+    const term = `%${params.q.trim()}%`;
+    conds.push(or(like(products.name, term), like(products.sku, term))!);
   }
+  if (params.stock === "out") conds.push(lte(products.stock, 0));
+  else if (params.stock === "low")
+    conds.push(and(gt(products.stock, 0), lte(products.stock, LOW_STOCK_THRESHOLD))!);
+  else if (params.stock === "in") conds.push(gt(products.stock, LOW_STOCK_THRESHOLD));
+  if (params.brand && params.brand !== "all") conds.push(eq(products.brandId, params.brand));
+  if (params.category && params.category !== "all")
+    conds.push(eq(products.categoryId, params.category));
+  if (params.flag === "featured") conds.push(eq(products.isFeatured, true));
+  else if (params.flag === "bestseller") conds.push(eq(products.isBestseller, true));
+  else if (params.flag === "no-image") conds.push(sql`json_array_length(${products.images}) = 0`);
 
-  if (params.stock === "out") filter.stock = { $lte: 0 };
-  else if (params.stock === "low") filter.stock = { $gt: 0, $lte: LOW_STOCK_THRESHOLD };
-  else if (params.stock === "in") filter.stock = { $gt: LOW_STOCK_THRESHOLD };
-
-  if (params.brand && params.brand !== "all") filter.brand = params.brand;
-  if (params.category && params.category !== "all") filter.category = params.category;
-
-  if (params.flag === "featured") filter.isFeatured = true;
-  else if (params.flag === "bestseller") filter.isBestseller = true;
-  else if (params.flag === "no-image") filter.images = { $size: 0 };
-
+  const where = conds.length ? and(...conds) : undefined;
   const sortKey = (params.sort ?? "newest") as ProductSort;
-  const sort = PRODUCT_SORTS[sortKey] ?? PRODUCT_SORTS.newest;
 
-  const [docs, total] = await Promise.all([
-    Product.find(filter)
-      .sort(sort)
-      .skip((page - 1) * pageSize)
+  const [rows, totalRow] = await Promise.all([
+    db()
+      .select({
+        id: products.id,
+        name: products.name,
+        slug: products.slug,
+        sku: products.sku,
+        price: products.price,
+        mrp: products.mrp,
+        stock: products.stock,
+        status: products.status,
+        images: products.images,
+        isFeatured: products.isFeatured,
+        isBestseller: products.isBestseller,
+        brandName: brands.name,
+        categoryName: categories.name,
+      })
+      .from(products)
+      .leftJoin(brands, eq(products.brandId, brands.id))
+      .leftJoin(categories, eq(products.categoryId, categories.id))
+      .where(where)
+      .orderBy(...productOrderBy(sortKey))
       .limit(pageSize)
-      .populate("brand", "name")
-      .populate("category", "name")
-      .lean(),
-    Product.countDocuments(filter),
+      .offset((page - 1) * pageSize)
+      .all(),
+    db().select({ n: count() }).from(products).where(where).get(),
   ]);
 
-  const rows: AdminProductRow[] = docs.map((p) => {
-    const brand = p.brand as { name?: string } | null;
-    const category = p.category as { name?: string } | null;
-    return {
-      id: String(p._id),
-      name: p.name,
-      slug: p.slug,
-      sku: p.sku,
-      price: p.price,
-      mrp: p.mrp,
-      stock: p.stock ?? 0,
-      status: p.status ?? "active",
-      brandName: brand?.name ?? "—",
-      categoryName: category?.name ?? "—",
-      image: (p.images as string[] | undefined)?.[0] ?? null,
-      isFeatured: Boolean(p.isFeatured),
-      isBestseller: Boolean(p.isBestseller),
-    };
-  });
+  const total = totalRow?.n ?? 0;
+  const mapped: AdminProductRow[] = rows.map((p) => ({
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    sku: p.sku,
+    price: p.price,
+    mrp: p.mrp,
+    stock: p.stock ?? 0,
+    status: p.status ?? "active",
+    brandName: p.brandName ?? "—",
+    categoryName: p.categoryName ?? "—",
+    image: (p.images as string[] | null)?.[0] ?? null,
+    isFeatured: Boolean(p.isFeatured),
+    isBestseller: Boolean(p.isBestseller),
+  }));
 
-  return { rows, total, page, pages: Math.max(1, Math.ceil(total / pageSize)) };
+  return { rows: mapped, total, page, pages: Math.max(1, Math.ceil(total / pageSize)) };
 }
 
 export type AdminProductForm = AdminProductInput & { id: string };
 
 export async function getProductForAdmin(id: string): Promise<AdminProductForm | null> {
-  await connectDB();
-  const p = await Product.findById(id).lean();
+  const p = await db().select().from(products).where(eq(products.id, id)).get();
   if (!p) return null;
   return {
-    id: String(p._id),
+    id: p.id,
     name: p.name,
     slug: p.slug,
     sku: p.sku,
-    brand: String(p.brand),
-    category: String(p.category),
+    brand: p.brandId,
+    category: p.categoryId,
     price: p.price,
     mrp: p.mrp,
     stock: p.stock ?? 0,
     gstPct: p.gstPct ?? 18,
     shortDescription: p.shortDescription ?? "",
     description: p.description ?? "",
-    images: (p.images as string[] | undefined) ?? [],
-    goals: (p.goals as string[] | undefined) ?? [],
-    tags: (p.tags as string[] | undefined) ?? [],
+    images: p.images ?? [],
+    goals: p.goals ?? [],
+    tags: p.tags ?? [],
     status: (p.status as AdminProductInput["status"]) ?? "active",
     isFeatured: Boolean(p.isFeatured),
     isBestseller: Boolean(p.isBestseller),
-    benefits: (p.benefits as string[] | undefined) ?? [],
-    keyBenefits: ((p.keyBenefits as { title?: string; description?: string; images?: string[] }[] | undefined) ?? []).map((k) => ({
+    benefits: p.benefits ?? [],
+    keyBenefits: (p.keyBenefits ?? []).map((k) => ({
       title: k.title ?? "",
       description: k.description ?? "",
-      images: (k.images as string[]) ?? [],
+      images: k.images ?? [],
     })),
-    ingredients: (p.ingredients as string[] | undefined) ?? [],
+    ingredients: p.ingredients ?? [],
     usage: p.usage ?? "",
-    nutritionFacts: (p.nutritionFacts ?? []).map((n) => ({
-      label: n.label,
-      value: n.value,
-    })),
+    nutritionFacts: (p.nutritionFacts ?? []).map((n) => ({ label: n.label, value: n.value })),
     variants: (p.variants ?? []).map((v) => ({
       label: v.label,
       flavour: v.flavour ?? undefined,
@@ -324,50 +382,84 @@ export class AdminError extends Error {
 }
 
 async function assertUniqueSlug(slug: string, excludeId?: string) {
-  const existing = await Product.findOne({ slug }).select("_id").lean();
-  if (existing && String(existing._id) !== excludeId) {
+  const existing = await db()
+    .select({ id: products.id })
+    .from(products)
+    .where(eq(products.slug, slug))
+    .get();
+  if (existing && existing.id !== excludeId) {
     throw new AdminError("Another product already uses that slug.", 409);
   }
 }
 
-export async function createProduct(input: AdminProductInput): Promise<string> {
-  await connectDB();
-  await assertUniqueSlug(input.slug);
-  const doc = await Product.create({
-    ...input,
+/** Map validated admin form input → a product row insert/update payload. */
+function mapProductInput(input: AdminProductInput) {
+  const variants: ProductVariant[] = (input.variants ?? []).map((v) => ({
+    id: crypto.randomUUID(),
+    label: v.label,
+    flavour: v.flavour,
+    size: v.size,
+    sku: v.sku,
+    price: v.price,
+    mrp: v.mrp,
+    stock: v.stock ?? 0,
+  }));
+  return {
+    name: input.name,
+    slug: input.slug,
+    sku: input.sku,
+    brandId: input.brand,
+    categoryId: input.category,
+    price: input.price,
+    mrp: input.mrp,
+    stock: input.stock ?? 0,
+    gstPct: input.gstPct ?? 18,
+    shortDescription: input.shortDescription ?? "",
+    description: input.description ?? "",
     images: input.images ?? [],
     goals: input.goals ?? [],
     tags: input.tags ?? [],
-    stock: input.stock ?? 0,
-    gstPct: input.gstPct ?? 18,
     status: input.status ?? "active",
-  });
-  return String(doc._id);
+    isFeatured: input.isFeatured ?? false,
+    isBestseller: input.isBestseller ?? false,
+    benefits: input.benefits ?? [],
+    keyBenefits: (input.keyBenefits ?? []).map((k) => ({
+      title: k.title,
+      description: k.description ?? "",
+      images: k.images ?? [],
+    })),
+    ingredients: input.ingredients ?? [],
+    usage: input.usage ?? "",
+    nutritionFacts: (input.nutritionFacts ?? []).map((n) => ({ label: n.label, value: n.value })),
+    variants,
+    seo: { title: input.seo?.title ?? "", description: input.seo?.description ?? "" },
+  };
+}
+
+export async function createProduct(input: AdminProductInput): Promise<string> {
+  await assertUniqueSlug(input.slug);
+  const [row] = await db()
+    .insert(products)
+    .values(mapProductInput(input))
+    .returning({ id: products.id });
+  return row.id;
 }
 
 export async function updateProduct(id: string, input: AdminProductInput): Promise<void> {
-  await connectDB();
   await assertUniqueSlug(input.slug, id);
-  const res = await Product.updateOne(
-    { _id: id },
-    {
-      $set: {
-        ...input,
-        images: input.images ?? [],
-        goals: input.goals ?? [],
-        tags: input.tags ?? [],
-      },
-    }
-  );
-  if (res.matchedCount === 0) throw new AdminError("Product not found.", 404);
+  const res = await db()
+    .update(products)
+    .set(mapProductInput(input))
+    .where(eq(products.id, id))
+    .returning({ id: products.id });
+  if (res.length === 0) throw new AdminError("Product not found.", 404);
 }
 
 export async function setProductStatus(
   id: string,
   status: "draft" | "active" | "archived"
 ): Promise<void> {
-  await connectDB();
-  await Product.updateOne({ _id: id }, { $set: { status } });
+  await db().update(products).set({ status }).where(eq(products.id, id));
 }
 
 // ---- form option data --------------------------------------------------
@@ -376,15 +468,15 @@ export async function getProductFormOptions(): Promise<{
   brands: { id: string; name: string }[];
   categories: { id: string; name: string }[];
 }> {
-  await connectDB();
-  const [brands, categories] = await Promise.all([
-    Brand.find({}).select("name").sort({ name: 1 }).lean(),
-    Category.find({}).select("name").sort({ name: 1 }).lean(),
+  const [brs, cats] = await Promise.all([
+    db().select({ id: brands.id, name: brands.name }).from(brands).orderBy(asc(brands.name)).all(),
+    db()
+      .select({ id: categories.id, name: categories.name })
+      .from(categories)
+      .orderBy(asc(categories.name))
+      .all(),
   ]);
-  return {
-    brands: brands.map((b) => ({ id: String(b._id), name: b.name })),
-    categories: categories.map((c) => ({ id: String(c._id), name: c.name })),
-  };
+  return { brands: brs, categories: cats };
 }
 
 /** Counts behind the admin list's quick filters. */
@@ -395,15 +487,28 @@ export async function getProductStockSummary(): Promise<{
   in: number;
   noImage: number;
 }> {
-  await connectDB();
   const [all, out, low, inStock, noImage] = await Promise.all([
-    Product.countDocuments({}),
-    Product.countDocuments({ stock: { $lte: 0 } }),
-    Product.countDocuments({ stock: { $gt: 0, $lte: LOW_STOCK_THRESHOLD } }),
-    Product.countDocuments({ stock: { $gt: LOW_STOCK_THRESHOLD } }),
-    Product.countDocuments({ images: { $size: 0 } }),
+    db().select({ n: count() }).from(products).get(),
+    db().select({ n: count() }).from(products).where(lte(products.stock, 0)).get(),
+    db()
+      .select({ n: count() })
+      .from(products)
+      .where(and(gt(products.stock, 0), lte(products.stock, LOW_STOCK_THRESHOLD)))
+      .get(),
+    db().select({ n: count() }).from(products).where(gt(products.stock, LOW_STOCK_THRESHOLD)).get(),
+    db()
+      .select({ n: count() })
+      .from(products)
+      .where(sql`json_array_length(${products.images}) = 0`)
+      .get(),
   ]);
-  return { all, out, low, in: inStock, noImage };
+  return {
+    all: all?.n ?? 0,
+    out: out?.n ?? 0,
+    low: low?.n ?? 0,
+    in: inStock?.n ?? 0,
+    noImage: noImage?.n ?? 0,
+  };
 }
 
 // ---- customers (read-only) --------------------------------------------
@@ -423,38 +528,55 @@ export async function listCustomers(params: {
   page?: number;
   pageSize?: number;
 }): Promise<{ rows: AdminCustomerRow[]; total: number; page: number; pages: number }> {
-  await connectDB();
   const page = Math.max(1, params.page ?? 1);
   const pageSize = params.pageSize ?? 20;
 
-  const filter: Record<string, unknown> = { role: "customer" };
+  const conds = [eq(users.role, "customer")];
   if (params.q) {
-    const rx = { $regex: params.q.trim(), $options: "i" };
-    filter.$or = [{ name: rx }, { email: rx }];
+    const term = `%${params.q.trim()}%`;
+    conds.push(or(like(users.name, term), like(users.email, term))!);
   }
+  const where = and(...conds);
 
-  const [users, total] = await Promise.all([
-    User.find(filter)
-      .select("name email phone createdAt")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * pageSize)
+  const [rows, totalRow] = await Promise.all([
+    db()
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        phone: users.phone,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .where(where)
+      .orderBy(desc(users.createdAt))
       .limit(pageSize)
-      .lean(),
-    User.countDocuments(filter),
+      .offset((page - 1) * pageSize)
+      .all(),
+    db().select({ n: count() }).from(users).where(where).get(),
   ]);
 
   // Order counts + spend per customer (paid orders only).
-  const ids = users.map((u) => u._id);
-  const agg = await Order.aggregate<{ _id: unknown; orders: number; spent: number }>([
-    { $match: { user: { $in: ids }, "payment.status": "paid" } },
-    { $group: { _id: "$user", orders: { $sum: 1 }, spent: { $sum: "$amounts.total" } } },
-  ]);
-  const byUser = new Map(agg.map((a) => [String(a._id), a]));
+  const ids = rows.map((u) => u.id);
+  const agg = ids.length
+    ? await db()
+        .select({
+          userId: orders.userId,
+          orders: count(),
+          spent: sql<number>`coalesce(sum(${orders.total}), 0)`,
+        })
+        .from(orders)
+        .where(and(eq(orders.paymentStatus, "paid"), inArray(orders.userId, ids)))
+        .groupBy(orders.userId)
+        .all()
+    : [];
+  const byUser = new Map(agg.map((a) => [a.userId, a]));
 
-  const rows: AdminCustomerRow[] = users.map((u) => {
-    const stats = byUser.get(String(u._id));
+  const total = totalRow?.n ?? 0;
+  const mapped: AdminCustomerRow[] = rows.map((u) => {
+    const stats = byUser.get(u.id);
     return {
-      id: String(u._id),
+      id: u.id,
       name: u.name,
       email: u.email,
       phone: u.phone ?? null,
@@ -464,5 +586,5 @@ export async function listCustomers(params: {
     };
   });
 
-  return { rows, total, page, pages: Math.max(1, Math.ceil(total / pageSize)) };
+  return { rows: mapped, total, page, pages: Math.max(1, Math.ceil(total / pageSize)) };
 }

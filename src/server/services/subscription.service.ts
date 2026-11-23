@@ -1,6 +1,6 @@
-import { connectDB } from "@/server/db";
-import { Subscription, type SubscriptionDoc } from "@/server/models/Subscription";
-import { Product } from "@/server/models/Product";
+import { and, desc, eq } from "drizzle-orm";
+import { db } from "@/server/db";
+import { subscriptions, products, users, type SubscriptionRow } from "@/server/schema";
 import { HttpError } from "@/server/errors";
 import type { SubscribeInput } from "@/lib/validators/subscription";
 
@@ -22,10 +22,10 @@ export type SubscriptionDTO = {
   createdAt: string;
 };
 
-function toDTO(s: SubscriptionDoc): SubscriptionDTO {
+function toDTO(s: SubscriptionRow): SubscriptionDTO {
   const discountPct = s.discountPct ?? SUBSCRIPTION_DISCOUNT_PCT;
   return {
-    id: String(s._id),
+    id: s.id,
     productName: s.productName,
     productSlug: s.productSlug,
     image: s.image ?? null,
@@ -45,16 +45,17 @@ export async function createSubscription(
   userId: string,
   input: SubscribeInput
 ): Promise<SubscriptionDTO> {
-  await connectDB();
-  const product = await Product.findOne({ slug: input.slug, status: "active" }).lean();
+  const product = await db()
+    .select()
+    .from(products)
+    .where(and(eq(products.slug, input.slug), eq(products.status, "active")))
+    .get();
   if (!product) throw new HttpError("Product not found.", 404);
 
   let price = product.price;
   let variantLabel: string | null = null;
   if (input.variantId) {
-    const variant = (product.variants ?? []).find(
-      (v) => String((v as { _id?: unknown })._id) === input.variantId
-    );
+    const variant = (product.variants ?? []).find((v) => v.id === input.variantId);
     if (!variant) throw new HttpError("Selected variant not found.", 404);
     price = variant.price;
     variantLabel = variant.label;
@@ -62,29 +63,36 @@ export async function createSubscription(
 
   const nextDeliveryAt = new Date(Date.now() + input.intervalDays * 24 * 60 * 60 * 1000);
 
-  const doc = await Subscription.create({
-    user: userId,
-    product: product._id,
-    productName: product.name,
-    productSlug: product.slug,
-    image: (product.images as string[] | undefined)?.[0] ?? null,
-    variantId: input.variantId ?? null,
-    variantLabel,
-    price,
-    qty: input.qty ?? 1,
-    intervalDays: input.intervalDays,
-    discountPct: SUBSCRIPTION_DISCOUNT_PCT,
-    status: "active",
-    nextDeliveryAt,
-  });
+  const [row] = await db()
+    .insert(subscriptions)
+    .values({
+      userId,
+      productId: product.id,
+      productName: product.name,
+      productSlug: product.slug,
+      image: (product.images ?? [])[0] ?? null,
+      variantId: input.variantId ?? null,
+      variantLabel,
+      price,
+      qty: input.qty ?? 1,
+      intervalDays: input.intervalDays,
+      discountPct: SUBSCRIPTION_DISCOUNT_PCT,
+      status: "active",
+      nextDeliveryAt,
+    })
+    .returning();
 
-  return toDTO(doc);
+  return toDTO(row);
 }
 
 export async function listUserSubscriptions(userId: string): Promise<SubscriptionDTO[]> {
-  await connectDB();
-  const docs = await Subscription.find({ user: userId }).sort({ createdAt: -1 }).lean();
-  return docs.map((d) => toDTO(d as unknown as SubscriptionDoc));
+  const docs = await db()
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.userId, userId))
+    .orderBy(desc(subscriptions.createdAt))
+    .all();
+  return docs.map(toDTO);
 }
 
 export async function updateSubscriptionStatus(
@@ -92,17 +100,21 @@ export async function updateSubscriptionStatus(
   id: string,
   action: "pause" | "resume" | "cancel"
 ): Promise<void> {
-  await connectDB();
-  const sub = await Subscription.findOne({ _id: id, user: userId });
+  const sub = await db()
+    .select()
+    .from(subscriptions)
+    .where(and(eq(subscriptions.id, id), eq(subscriptions.userId, userId)))
+    .get();
   if (!sub) throw new HttpError("Subscription not found.", 404);
 
-  if (action === "cancel") sub.status = "cancelled";
-  else if (action === "pause") sub.status = "paused";
+  const patch: Partial<typeof subscriptions.$inferInsert> = {};
+  if (action === "cancel") patch.status = "cancelled";
+  else if (action === "pause") patch.status = "paused";
   else if (action === "resume") {
-    sub.status = "active";
-    sub.nextDeliveryAt = new Date(Date.now() + (sub.intervalDays ?? 30) * 24 * 60 * 60 * 1000);
+    patch.status = "active";
+    patch.nextDeliveryAt = new Date(Date.now() + (sub.intervalDays ?? 30) * 24 * 60 * 60 * 1000);
   }
-  await sub.save();
+  await db().update(subscriptions).set(patch).where(eq(subscriptions.id, id));
 }
 
 // ---- admin -------------------------------------------------------------
@@ -113,20 +125,20 @@ export type AdminSubscriptionRow = SubscriptionDTO & {
 };
 
 export async function listAllSubscriptions(): Promise<AdminSubscriptionRow[]> {
-  await connectDB();
-  const docs = await Subscription.find({})
-    .sort({ createdAt: -1 })
+  const docs = await db()
+    .select({
+      sub: subscriptions,
+      customerName: users.name,
+      customerEmail: users.email,
+    })
+    .from(subscriptions)
+    .leftJoin(users, eq(subscriptions.userId, users.id))
+    .orderBy(desc(subscriptions.createdAt))
     .limit(200)
-    .populate("user", "name email")
-    .lean();
-  return docs.map((d) => {
-    const s = d as unknown as SubscriptionDoc & {
-      user?: { name?: string; email?: string } | null;
-    };
-    return {
-      ...toDTO(s),
-      customerName: s.user?.name ?? "—",
-      customerEmail: s.user?.email ?? "—",
-    };
-  });
+    .all();
+  return docs.map((d) => ({
+    ...toDTO(d.sub),
+    customerName: d.customerName ?? "—",
+    customerEmail: d.customerEmail ?? "—",
+  }));
 }

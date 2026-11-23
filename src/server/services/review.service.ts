@@ -1,14 +1,13 @@
-import { connectDB } from "@/server/db";
-import { Review, type ReviewDoc } from "@/server/models/Review";
-import { Product } from "@/server/models/Product";
-import { Order } from "@/server/models/Order";
+import { and, count, desc, eq, sql } from "drizzle-orm";
+import { db } from "@/server/db";
+import { reviews, products, orders, type ReviewRow } from "@/server/schema";
 import { HttpError } from "@/server/errors";
 import type { ReviewInput } from "@/lib/validators/review";
 import type { ReviewDTO, ReviewSummary } from "@/types/review";
 
-function toDTO(r: ReviewDoc): ReviewDTO {
+function toDTO(r: ReviewRow): ReviewDTO {
   return {
-    id: String(r._id),
+    id: r.id,
     authorName: r.authorName,
     rating: r.rating,
     title: r.title ?? null,
@@ -26,18 +25,21 @@ function toDTO(r: ReviewDoc): ReviewDTO {
 
 /** Approved, written reviews for a product (newest first). */
 export async function listProductReviews(productId: string): Promise<ReviewDTO[]> {
-  await connectDB();
-  const docs = await Review.find({ product: productId, status: "approved" })
-    .sort({ createdAt: -1 })
-    .lean();
-  return docs.map((d) => toDTO(d as unknown as ReviewDoc));
+  const docs = await db()
+    .select()
+    .from(reviews)
+    .where(and(eq(reviews.productId, productId), eq(reviews.status, "approved")))
+    .orderBy(desc(reviews.createdAt))
+    .all();
+  return docs.map(toDTO);
 }
 
 export async function getReviewSummary(productId: string): Promise<ReviewSummary> {
-  await connectDB();
-  const docs = await Review.find({ product: productId, status: "approved" })
-    .select("rating")
-    .lean();
+  const docs = await db()
+    .select({ rating: reviews.rating })
+    .from(reviews)
+    .where(and(eq(reviews.productId, productId), eq(reviews.status, "approved")))
+    .all();
   const distribution: ReviewSummary["distribution"] = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   let sum = 0;
   for (const d of docs) {
@@ -45,28 +47,31 @@ export async function getReviewSummary(productId: string): Promise<ReviewSummary
     distribution[r] += 1;
     sum += d.rating;
   }
-  const count = docs.length;
+  const n = docs.length;
   return {
-    count,
-    average: count ? Math.round((sum / count) * 10) / 10 : 0,
+    count: n,
+    average: n ? Math.round((sum / n) * 10) / 10 : 0,
     distribution,
   };
 }
 
-export async function getUserReview(
-  userId: string,
-  productId: string
-): Promise<ReviewDTO | null> {
-  await connectDB();
-  const doc = await Review.findOne({ product: productId, user: userId }).lean();
-  return doc ? toDTO(doc as unknown as ReviewDoc) : null;
+export async function getUserReview(userId: string, productId: string): Promise<ReviewDTO | null> {
+  const doc = await db()
+    .select()
+    .from(reviews)
+    .where(and(eq(reviews.productId, productId), eq(reviews.userId, userId)))
+    .get();
+  return doc ? toDTO(doc) : null;
 }
 
 async function productIdFromSlug(slug: string): Promise<string> {
-  await connectDB();
-  const product = await Product.findOne({ slug, status: "active" }).select("_id").lean();
+  const product = await db()
+    .select({ id: products.id })
+    .from(products)
+    .where(and(eq(products.slug, slug), eq(products.status, "active")))
+    .get();
   if (!product) throw new HttpError("Product not found.", 404);
-  return String(product._id);
+  return product.id;
 }
 
 /**
@@ -81,30 +86,44 @@ export async function upsertReviewBySlug(
 ): Promise<ReviewDTO> {
   const productId = await productIdFromSlug(slug);
 
-  const isVerifiedPurchase = Boolean(
-    await Order.exists({
-      user: userId,
-      "payment.status": "paid",
-      "items.product": productId,
-    })
-  );
+  const paid = await db()
+    .select({ n: count() })
+    .from(orders)
+    .where(
+      and(
+        eq(orders.userId, userId),
+        eq(orders.paymentStatus, "paid"),
+        sql`EXISTS (SELECT 1 FROM json_each(${orders.items}) WHERE json_extract(value, '$.product') = ${productId})`
+      )
+    )
+    .get();
+  const isVerifiedPurchase = (paid?.n ?? 0) > 0;
 
-  const doc = await Review.findOneAndUpdate(
-    { product: productId, user: userId },
-    {
-      $set: {
-        authorName: authorName || "Customer",
-        rating: input.rating,
-        title: input.title ?? "",
-        body: input.body,
-        isVerifiedPurchase,
-        status: "approved",
-      },
-    },
-    { new: true, upsert: true, setDefaultsOnInsert: true }
-  ).lean();
+  const fields = {
+    authorName: authorName || "Customer",
+    rating: input.rating,
+    title: input.title ?? "",
+    body: input.body,
+    isVerifiedPurchase,
+    status: "approved" as const,
+  };
 
-  return toDTO(doc as unknown as ReviewDoc);
+  const existing = await db()
+    .select({ id: reviews.id })
+    .from(reviews)
+    .where(and(eq(reviews.productId, productId), eq(reviews.userId, userId)))
+    .get();
+
+  let row: ReviewRow;
+  if (existing) {
+    [row] = await db().update(reviews).set(fields).where(eq(reviews.id, existing.id)).returning();
+  } else {
+    [row] = await db()
+      .insert(reviews)
+      .values({ productId, userId, ...fields })
+      .returning();
+  }
+  return toDTO(row);
 }
 
 // ---- admin moderation --------------------------------------------------
@@ -123,75 +142,73 @@ export type AdminReviewRow = {
   createdAt: string;
 };
 
-type PopulatedReview = ReviewDoc & {
-  product?: { name?: string; slug?: string } | null;
-};
-
-function toAdminRow(r: PopulatedReview): AdminReviewRow {
-  return {
-    id: String(r._id),
-    productName: r.product?.name ?? "—",
-    productSlug: r.product?.slug ?? "",
-    authorName: r.authorName,
-    rating: r.rating,
-    title: r.title ?? null,
-    body: r.body,
-    status: (r.status as AdminReviewRow["status"]) ?? "approved",
-    isVerifiedPurchase: Boolean(r.isVerifiedPurchase),
-    reply: r.reply?.body ?? null,
-    createdAt: new Date(r.createdAt).toISOString(),
-  };
-}
-
 export async function listAllReviews(params: {
   status?: string;
   page?: number;
   pageSize?: number;
 }): Promise<{ rows: AdminReviewRow[]; total: number; page: number; pages: number }> {
-  await connectDB();
   const page = Math.max(1, params.page ?? 1);
   const pageSize = params.pageSize ?? 30;
 
-  const filter: Record<string, unknown> = {};
-  if (params.status && params.status !== "all") filter.status = params.status;
+  const where =
+    params.status && params.status !== "all" ? eq(reviews.status, params.status) : undefined;
 
-  const [docs, total] = await Promise.all([
-    Review.find(filter)
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * pageSize)
+  const [docs, totalRow] = await Promise.all([
+    db()
+      .select({
+        review: reviews,
+        productName: products.name,
+        productSlug: products.slug,
+      })
+      .from(reviews)
+      .leftJoin(products, eq(reviews.productId, products.id))
+      .where(where)
+      .orderBy(desc(reviews.createdAt))
       .limit(pageSize)
-      .populate("product", "name slug")
-      .lean(),
-    Review.countDocuments(filter),
+      .offset((page - 1) * pageSize)
+      .all(),
+    db().select({ n: count() }).from(reviews).where(where).get(),
   ]);
 
-  return {
-    rows: docs.map((d) => toAdminRow(d as unknown as PopulatedReview)),
-    total,
-    page,
-    pages: Math.max(1, Math.ceil(total / pageSize)),
-  };
+  const total = totalRow?.n ?? 0;
+  const rows: AdminReviewRow[] = docs.map((d) => ({
+    id: d.review.id,
+    productName: d.productName ?? "—",
+    productSlug: d.productSlug ?? "",
+    authorName: d.review.authorName,
+    rating: d.review.rating,
+    title: d.review.title ?? null,
+    body: d.review.body,
+    status: (d.review.status as AdminReviewRow["status"]) ?? "approved",
+    isVerifiedPurchase: Boolean(d.review.isVerifiedPurchase),
+    reply: d.review.reply?.body ?? null,
+    createdAt: new Date(d.review.createdAt).toISOString(),
+  }));
+
+  return { rows, total, page, pages: Math.max(1, Math.ceil(total / pageSize)) };
 }
 
 export async function setReviewStatus(
   id: string,
   status: "pending" | "approved" | "rejected"
 ): Promise<void> {
-  await connectDB();
-  const res = await Review.updateOne({ _id: id }, { $set: { status } });
-  if (res.matchedCount === 0) throw new HttpError("Review not found.", 404);
+  const res = await db()
+    .update(reviews)
+    .set({ status })
+    .where(eq(reviews.id, id))
+    .returning({ id: reviews.id });
+  if (res.length === 0) throw new HttpError("Review not found.", 404);
 }
 
 export async function replyToReview(id: string, body: string): Promise<void> {
-  await connectDB();
-  const res = await Review.updateOne(
-    { _id: id },
-    { $set: { reply: { body: body.trim(), repliedAt: new Date() } } }
-  );
-  if (res.matchedCount === 0) throw new HttpError("Review not found.", 404);
+  const res = await db()
+    .update(reviews)
+    .set({ reply: { body: body.trim(), repliedAt: Date.now() } })
+    .where(eq(reviews.id, id))
+    .returning({ id: reviews.id });
+  if (res.length === 0) throw new HttpError("Review not found.", 404);
 }
 
 export async function deleteReview(id: string): Promise<void> {
-  await connectDB();
-  await Review.deleteOne({ _id: id });
+  await db().delete(reviews).where(eq(reviews.id, id));
 }

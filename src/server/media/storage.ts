@@ -1,17 +1,18 @@
 import crypto from "node:crypto";
 import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { env } from "@/env";
 
 /**
- * Image storage abstraction.
+ * Image / video storage abstraction.
  *
- * When Cloudinary credentials are present we upload there (signed uploads) and
- * return the CDN URL. Otherwise we fall back to writing into `public/uploads`
- * and return a same-origin `/uploads/…` path — so image management works
- * end-to-end with no keys, and swaps to Cloudinary automatically once the env
- * vars are set. (The local fallback needs a writable disk / long-running Node
- * server; on serverless, configure Cloudinary.)
+ * Priority:
+ *  1. Cloudflare R2 (the `MEDIA` binding) — the Cloudflare-native default. Files
+ *     are stored in R2 and served same-origin via `/api/media/<key>`.
+ *  2. Cloudinary (REST) when its keys are set — kept for backwards compatibility.
+ *  3. Local disk (`public/uploads`) — dev only; the Workers FS is read-only, so
+ *     this never runs in production.
  */
 
 const CLOUD_NAME = env.CLOUDINARY_CLOUD_NAME?.trim() || "";
@@ -19,10 +20,38 @@ const API_KEY = env.CLOUDINARY_API_KEY?.trim() || "";
 const API_SECRET = env.CLOUDINARY_API_SECRET?.trim() || "";
 
 export const isCloudinary = Boolean(CLOUD_NAME && API_KEY && API_SECRET);
-export const mediaMode: "cloudinary" | "local" = isCloudinary ? "cloudinary" : "local";
 
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5MB (images)
 export const MAX_VIDEO_BYTES = 64 * 1024 * 1024; // 64MB (videos)
+
+/* ---- R2 binding (per-request) -------------------------------------- */
+
+interface R2BucketLike {
+  put(
+    key: string,
+    value: ArrayBuffer | ArrayBufferView | ReadableStream | string,
+    options?: { httpMetadata?: { contentType?: string } }
+  ): Promise<unknown>;
+}
+
+/** The R2 `MEDIA` binding for the current request, or null when unbound. */
+function r2(): R2BucketLike | null {
+  try {
+    const bucket = (getCloudflareContext().env as unknown as { MEDIA?: R2BucketLike }).MEDIA;
+    return bucket ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export type MediaMode = "r2" | "cloudinary" | "local";
+
+/** Which backend an upload will use right now (R2 is per-request). */
+export function effectiveMediaMode(): MediaMode {
+  if (r2()) return "r2";
+  if (isCloudinary) return "cloudinary";
+  return "local";
+}
 
 const EXT_BY_MIME: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -73,16 +102,22 @@ export function assertValidVideo(file: { type: string; size: number }) {
 export async function uploadImage(file: File): Promise<{ url: string }> {
   assertValidImage(file);
   const buffer = Buffer.from(await file.arrayBuffer());
+  const ext = EXT_BY_MIME[file.type] ?? "bin";
+  const bucket = r2();
+  if (bucket) return uploadToR2(bucket, buffer, ext, file.type);
   if (isCloudinary) return uploadToCloudinary(buffer, file.type, "image");
-  return uploadToLocal(buffer, EXT_BY_MIME[file.type] ?? "bin");
+  return uploadToLocal(buffer, ext);
 }
 
 /** Upload a single video and return its public URL. */
 export async function uploadVideo(file: File): Promise<{ url: string }> {
   assertValidVideo(file);
   const buffer = Buffer.from(await file.arrayBuffer());
+  const ext = EXT_BY_VIDEO_MIME[file.type] ?? "bin";
+  const bucket = r2();
+  if (bucket) return uploadToR2(bucket, buffer, ext, file.type);
   if (isCloudinary) return uploadToCloudinary(buffer, file.type, "video");
-  return uploadToLocal(buffer, EXT_BY_VIDEO_MIME[file.type] ?? "bin");
+  return uploadToLocal(buffer, ext);
 }
 
 /** Upload any supported media (image or video), branching on the MIME type. */
@@ -93,6 +128,21 @@ export async function uploadMedia(file: File): Promise<{ url: string; kind: "ima
   }
   const { url } = await uploadImage(file);
   return { url, kind: "image" };
+}
+
+function mediaKey(ext: string): string {
+  return `5xl/${Date.now()}-${crypto.randomBytes(6).toString("hex")}.${ext}`;
+}
+
+async function uploadToR2(
+  bucket: R2BucketLike,
+  buffer: Buffer,
+  ext: string,
+  contentType: string
+): Promise<{ url: string }> {
+  const key = mediaKey(ext);
+  await bucket.put(key, buffer, { httpMetadata: { contentType } });
+  return { url: `/api/media/${key}` };
 }
 
 async function uploadToLocal(buffer: Buffer, ext: string): Promise<{ url: string }> {

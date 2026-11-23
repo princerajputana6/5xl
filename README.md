@@ -29,8 +29,47 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+## Deploy on Cloudflare Workers
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+This app runs on [Cloudflare Workers](https://developers.cloudflare.com/workers/) via the
+[OpenNext Cloudflare adapter](https://opennext.js.org/cloudflare). Config lives in
+`wrangler.jsonc` and `open-next.config.ts`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Local preview (Workers runtime)
+
+```bash
+# .dev.vars holds the runtime env for preview (gitignored; mirror of .env.local)
+npm run preview   # builds with OpenNext and serves on http://localhost:8787
+```
+
+### Deploy
+
+```bash
+npx wrangler login
+# set runtime secrets (not committed):
+npx wrangler secret put MONGODB_URI
+npx wrangler secret put AUTH_SECRET
+npx wrangler secret put AUTH_URL
+# optional integrations:
+npx wrangler secret put RESEND_API_KEY
+npx wrangler secret put EMAIL_FROM
+npx wrangler secret put CLOUDINARY_CLOUD_NAME
+npx wrangler secret put CLOUDINARY_API_KEY
+npx wrangler secret put CLOUDINARY_API_SECRET
+npx wrangler secret put RAZORPAY_KEY_ID
+npx wrangler secret put RAZORPAY_KEY_SECRET
+npx wrangler secret put RAZORPAY_WEBHOOK_SECRET
+
+npm run deploy
+```
+
+Public build-time vars (e.g. `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_GTM_ID`) must be present at
+build time — keep them in `.env.local`, or set them as Cloudflare build env vars in CI.
+
+### Notes
+
+- **MongoDB** works on Workers through `nodejs_compat` (compat date ≥ 2025-03-20) with mongoose 9.
+- **Image uploads** must use Cloudinary in production — the local-disk fallback in
+  `src/server/media/storage.ts` cannot write to the read-only Workers filesystem. Set the
+  `CLOUDINARY_*` secrets (or migrate the fallback to R2).
+- **next/image** optimization is disabled (`images.unoptimized`) because Workers lack `sharp`.

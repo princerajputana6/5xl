@@ -4,6 +4,10 @@ import { Footer } from "@/components/shop/footer";
 import { MobileBottomNav } from "@/components/shop/mobile-bottom-nav";
 import { CookieConsent } from "@/components/shop/cookie-consent";
 
+// The storefront reads live CMS/catalogue data from D1 (a per-request binding),
+// so it renders dynamically rather than being prerendered at build.
+export const dynamic = "force-dynamic";
+
 export default function ShopLayout({
   children,
 }: {

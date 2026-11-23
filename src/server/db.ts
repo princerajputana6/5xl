@@ -1,44 +1,31 @@
-import mongoose from "mongoose";
-import { env } from "@/env";
+import { drizzle, type DrizzleD1Database } from "drizzle-orm/d1";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import * as schema from "@/server/schema";
 
 /**
- * Cached Mongoose connection. Next.js hot-reloads modules in dev and runs
- * serverless functions in prod, both of which would otherwise open a new
- * connection per invocation. We cache the promise on globalThis.
+ * Cloudflare D1 (SQLite) access via Drizzle ORM.
+ *
+ * D1 is a binding, not a network socket — there is no connection to open, pool
+ * or cache, and none of the per-request isolation problems MongoDB had on
+ * Workers. Each call wraps the request's `env.DB` binding in a Drizzle client;
+ * creating the wrapper is free.
  */
-type MongooseCache = {
-  conn: typeof mongoose | null;
-  promise: Promise<typeof mongoose> | null;
-};
+export type DB = DrizzleD1Database<typeof schema>;
 
-const globalForMongoose = globalThis as unknown as {
-  _mongoose?: MongooseCache;
-};
+/** The D1 binding type, taken from what `drizzle()` accepts (no global types needed). */
+type D1Binding = Parameters<typeof drizzle>[0];
+type EnvWithDB = { DB: D1Binding };
 
-const cache: MongooseCache =
-  globalForMongoose._mongoose ?? { conn: null, promise: null };
-
-if (!globalForMongoose._mongoose) {
-  globalForMongoose._mongoose = cache;
+/** Drizzle client bound to the current request's D1 database. */
+export function db(): DB {
+  const { env } = getCloudflareContext();
+  const binding = (env as unknown as EnvWithDB).DB;
+  if (!binding) {
+    throw new Error(
+      "D1 binding `DB` is not available. Check `d1_databases` in wrangler.jsonc."
+    );
+  }
+  return drizzle(binding, { schema });
 }
 
-export async function connectDB(): Promise<typeof mongoose> {
-  if (cache.conn) return cache.conn;
-
-  if (!cache.promise) {
-    mongoose.set("strictQuery", true);
-    cache.promise = mongoose.connect(env.MONGODB_URI, {
-      bufferCommands: false,
-      dbName: "fivexl",
-    });
-  }
-
-  try {
-    cache.conn = await cache.promise;
-  } catch (err) {
-    cache.promise = null;
-    throw err;
-  }
-
-  return cache.conn;
-}
+export { schema };

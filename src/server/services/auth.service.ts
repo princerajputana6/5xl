@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
-import { connectDB } from "@/server/db";
-import { User } from "@/server/models/User";
+import { eq } from "drizzle-orm";
+import { db } from "@/server/db";
+import { users } from "@/server/schema";
 import { registerSchema, type RegisterInput } from "@/lib/validators/auth";
 import { sendEmailSafe } from "@/server/email/mailer";
 import { welcomeEmail } from "@/server/email/templates";
@@ -17,24 +18,25 @@ export class AuthError extends Error {
 
 export async function registerUser(input: RegisterInput) {
   const data = registerSchema.parse(input);
-  await connectDB();
 
-  const existing = await User.findOne({ email: data.email.toLowerCase() })
-    .select("_id")
-    .lean();
+  const email = data.email.toLowerCase();
+  const existing = await db().select({ id: users.id }).from(users).where(eq(users.email, email)).get();
   if (existing) {
     throw new AuthError("An account with this email already exists", 409);
   }
 
   const passwordHash = await bcrypt.hash(data.password, 10);
 
-  const user = await User.create({
-    name: data.name,
-    email: data.email.toLowerCase(),
-    phone: data.phone || undefined,
-    passwordHash,
-    role: "customer",
-  });
+  const [user] = await db()
+    .insert(users)
+    .values({
+      name: data.name,
+      email,
+      phone: data.phone || null,
+      passwordHash,
+      role: "customer",
+    })
+    .returning({ id: users.id, email: users.email, name: users.name });
 
   // OTP verification is stubbed for M1. When an SMS/email provider is wired,
   // dispatch the code here and gate emailVerified/phoneVerified on it.
@@ -44,7 +46,7 @@ export async function registerUser(input: RegisterInput) {
   const { subject, html } = welcomeEmail(user.name);
   sendEmailSafe({ to: user.email, subject, html });
 
-  return { id: String(user._id), email: user.email, name: user.name };
+  return { id: user.id, email: user.email, name: user.name };
 }
 
 /**

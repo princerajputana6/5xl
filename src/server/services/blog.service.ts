@@ -1,5 +1,6 @@
-import { connectDB } from "@/server/db";
-import { Post } from "@/server/models/Post";
+import { and, count, desc, eq, like, ne, or, sql } from "drizzle-orm";
+import { db } from "@/server/db";
+import { posts, type PostRow } from "@/server/schema";
 import type { BlogPostInput } from "@/lib/validators/blog";
 import { AdminError } from "@/server/services/admin.service";
 
@@ -44,16 +45,16 @@ function estimateReadingMinutes(html: string): number {
   return Math.max(1, Math.round(words / 200));
 }
 
-function toCard(p: Record<string, unknown>): PostCardDTO {
+function toCard(p: PostRow): PostCardDTO {
   return {
-    title: String(p.title ?? ""),
-    slug: String(p.slug ?? ""),
-    excerpt: (p.excerpt as string) ?? "",
-    coverImage: (p.coverImage as string) || null,
-    category: (p.category as string) || "General",
-    author: (p.author as string) || "The 5XL Nutrition",
-    publishedAt: p.publishedAt ? new Date(p.publishedAt as string).toISOString() : null,
-    readingMinutes: typeof p.readingMinutes === "number" ? (p.readingMinutes as number) : 1,
+    title: p.title ?? "",
+    slug: p.slug ?? "",
+    excerpt: p.excerpt ?? "",
+    coverImage: p.coverImage || null,
+    category: p.category || "General",
+    author: p.author || "The 5XL Nutrition",
+    publishedAt: p.publishedAt ? new Date(p.publishedAt).toISOString() : null,
+    readingMinutes: p.readingMinutes ?? 1,
   };
 }
 
@@ -64,24 +65,28 @@ export async function listPublishedPosts(params: {
   q?: string;
   category?: string;
 }): Promise<PostListResult> {
-  await connectDB();
   const page = Math.max(1, params.page ?? 1);
-  const filter: Record<string, unknown> = { status: "published" };
-  if (params.category) filter.category = params.category;
+  const conds = [eq(posts.status, "published")];
+  if (params.category) conds.push(eq(posts.category, params.category));
   if (params.q) {
-    const rx = new RegExp(params.q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-    filter.$or = [{ title: rx }, { excerpt: rx }, { tags: rx }];
+    const term = `%${params.q.trim()}%`;
+    conds.push(or(like(posts.title, term), like(posts.excerpt, term), like(posts.tags, term))!);
   }
+  const where = and(...conds);
 
-  const [docs, total] = await Promise.all([
-    Post.find(filter)
-      .sort({ publishedAt: -1, createdAt: -1 })
-      .skip((page - 1) * PAGE_SIZE)
+  const [docs, totalRow] = await Promise.all([
+    db()
+      .select()
+      .from(posts)
+      .where(where)
+      .orderBy(desc(posts.publishedAt), desc(posts.createdAt))
       .limit(PAGE_SIZE)
-      .lean(),
-    Post.countDocuments(filter),
+      .offset((page - 1) * PAGE_SIZE)
+      .all(),
+    db().select({ n: count() }).from(posts).where(where).get(),
   ]);
 
+  const total = totalRow?.n ?? 0;
   return {
     rows: docs.map(toCard),
     total,
@@ -91,24 +96,26 @@ export async function listPublishedPosts(params: {
 }
 
 export async function listPostCategories(): Promise<string[]> {
-  await connectDB();
-  const cats = await Post.distinct("category", { status: "published" });
-  return (cats as string[]).filter(Boolean).sort();
+  const cats = await db()
+    .selectDistinct({ category: posts.category })
+    .from(posts)
+    .where(eq(posts.status, "published"))
+    .all();
+  return cats.map((c) => c.category).filter(Boolean).sort();
 }
 
 export async function getPostBySlug(slug: string): Promise<PostDetailDTO | null> {
-  await connectDB();
-  const p = await Post.findOne({ slug, status: "published" }).lean();
+  const p = await db()
+    .select()
+    .from(posts)
+    .where(and(eq(posts.slug, slug), eq(posts.status, "published")))
+    .get();
   if (!p) return null;
-  const doc = p as Record<string, unknown>;
   return {
-    ...toCard(doc),
-    contentHtml: (doc.contentHtml as string) ?? "",
-    tags: (doc.tags as string[]) ?? [],
-    seo: {
-      title: (doc.seo as { title?: string })?.title ?? "",
-      description: (doc.seo as { description?: string })?.description ?? "",
-    },
+    ...toCard(p),
+    contentHtml: p.contentHtml ?? "",
+    tags: p.tags ?? [],
+    seo: { title: p.seo?.title ?? "", description: p.seo?.description ?? "" },
   };
 }
 
@@ -117,21 +124,22 @@ export async function listRelatedPosts(
   category: string,
   limit = 3
 ): Promise<PostCardDTO[]> {
-  await connectDB();
-  const docs = await Post.find({ status: "published", slug: { $ne: slug }, category })
-    .sort({ publishedAt: -1 })
+  const docs = await db()
+    .select()
+    .from(posts)
+    .where(and(eq(posts.status, "published"), ne(posts.slug, slug), eq(posts.category, category)))
+    .orderBy(desc(posts.publishedAt))
     .limit(limit)
-    .lean();
+    .all();
   return docs.map(toCard);
 }
 
 /* ------------------------------ admin ------------------------------ */
 
 export async function listPostsAdmin(): Promise<PostAdminRow[]> {
-  await connectDB();
-  const docs = await Post.find({}).sort({ updatedAt: -1 }).lean();
+  const docs = await db().select().from(posts).orderBy(desc(posts.updatedAt)).all();
   return docs.map((p) => ({
-    id: String(p._id),
+    id: p.id,
     title: p.title,
     slug: p.slug,
     category: p.category ?? "General",
@@ -142,11 +150,10 @@ export async function listPostsAdmin(): Promise<PostAdminRow[]> {
 }
 
 export async function getPostAdmin(id: string): Promise<(BlogPostInput & { id: string }) | null> {
-  await connectDB();
-  const p = await Post.findById(id).lean();
+  const p = await db().select().from(posts).where(eq(posts.id, id)).get();
   if (!p) return null;
   return {
-    id: String(p._id),
+    id: p.id,
     title: p.title,
     slug: p.slug,
     excerpt: p.excerpt ?? "",
@@ -161,48 +168,63 @@ export async function getPostAdmin(id: string): Promise<(BlogPostInput & { id: s
 }
 
 async function assertUniqueSlug(slug: string, excludeId?: string) {
-  const existing = await Post.findOne({ slug }).select("_id").lean();
-  if (existing && String(existing._id) !== excludeId) {
+  const existing = await db().select({ id: posts.id }).from(posts).where(eq(posts.slug, slug)).get();
+  if (existing && existing.id !== excludeId) {
     throw new AdminError("Another post already uses that slug.", 409);
   }
 }
 
+function mapInput(input: BlogPostInput) {
+  return {
+    title: input.title,
+    slug: input.slug,
+    excerpt: input.excerpt ?? "",
+    coverImage: input.coverImage ?? "",
+    contentHtml: input.contentHtml ?? "",
+    category: input.category ?? "General",
+    tags: input.tags ?? [],
+    author: input.author ?? "The 5XL Nutrition",
+    seo: { title: input.seo?.title ?? "", description: input.seo?.description ?? "" },
+  };
+}
+
 export async function createPost(input: BlogPostInput): Promise<string> {
-  await connectDB();
   await assertUniqueSlug(input.slug);
   const status = input.status ?? "published";
-  const doc = await Post.create({
-    ...input,
-    status,
-    readingMinutes: estimateReadingMinutes(input.contentHtml ?? ""),
-    publishedAt: status === "published" ? new Date() : undefined,
-  });
-  return String(doc._id);
+  const [row] = await db()
+    .insert(posts)
+    .values({
+      ...mapInput(input),
+      status,
+      readingMinutes: estimateReadingMinutes(input.contentHtml ?? ""),
+      publishedAt: status === "published" ? new Date() : null,
+    })
+    .returning({ id: posts.id });
+  return row.id;
 }
 
 export async function updatePost(id: string, input: BlogPostInput): Promise<void> {
-  await connectDB();
   await assertUniqueSlug(input.slug, id);
-  const existing = await Post.findById(id).select("status publishedAt").lean();
+  const existing = await db()
+    .select({ status: posts.status, publishedAt: posts.publishedAt })
+    .from(posts)
+    .where(eq(posts.id, id))
+    .get();
   if (!existing) throw new AdminError("Post not found.", 404);
   const status = input.status ?? existing.status ?? "published";
   const publishedAt =
     status === "published" ? existing.publishedAt ?? new Date() : existing.publishedAt;
-  const res = await Post.updateOne(
-    { _id: id },
-    {
-      $set: {
-        ...input,
-        status,
-        publishedAt,
-        readingMinutes: estimateReadingMinutes(input.contentHtml ?? ""),
-      },
-    }
-  );
-  if (res.matchedCount === 0) throw new AdminError("Post not found.", 404);
+  await db()
+    .update(posts)
+    .set({
+      ...mapInput(input),
+      status,
+      publishedAt,
+      readingMinutes: estimateReadingMinutes(input.contentHtml ?? ""),
+    })
+    .where(eq(posts.id, id));
 }
 
 export async function deletePost(id: string): Promise<void> {
-  await connectDB();
-  await Post.deleteOne({ _id: id });
+  await db().delete(posts).where(eq(posts.id, id));
 }

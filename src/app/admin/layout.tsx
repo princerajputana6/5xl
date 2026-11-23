@@ -7,6 +7,9 @@ export const metadata: Metadata = {
   title: { default: "Admin · 5XL", template: "%s · 5XL Admin" },
 };
 
+// Admin reads live data from D1 (a per-request binding) and the staff session.
+export const dynamic = "force-dynamic";
+
 const ROLE_LABELS: Record<Role, string> = {
   customer: "Customer",
   support_executive: "Support",

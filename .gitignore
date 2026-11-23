@@ -17,6 +17,16 @@
 /.next/
 /out/
 
+# cloudflare / opennext
+/.open-next/
+/.wrangler/
+.dev.vars
+cloudflare-env.d.ts
+
+# Mongo→D1 ETL output (contains password hashes + customer emails — never commit).
+# The schema migration under /drizzle itself IS committed; only the data dump is ignored.
+/drizzle/data/
+
 # production
 /build
 

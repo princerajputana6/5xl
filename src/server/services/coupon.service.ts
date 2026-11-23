@@ -1,5 +1,6 @@
-import { connectDB } from "@/server/db";
-import { Coupon, type CouponDoc } from "@/server/models/Coupon";
+import { and, asc, desc, eq, gte, isNull, lte, ne, or } from "drizzle-orm";
+import { db } from "@/server/db";
+import { coupons, type CouponRow } from "@/server/schema";
 import { HttpError } from "@/server/errors";
 import type { AdminCouponInput } from "@/lib/validators/coupon";
 
@@ -19,21 +20,23 @@ export type PublicOffer = {
 
 /** Currently-live coupons, for the offers strip on product pages. */
 export async function listPublicOffers(limit = 3): Promise<PublicOffer[]> {
-  await connectDB();
   const now = new Date();
-  const docs = await Coupon.find({
-    isActive: true,
-    $and: [
-      { $or: [{ startsAt: { $exists: false } }, { startsAt: null }, { startsAt: { $lte: now } }] },
-      { $or: [{ expiresAt: { $exists: false } }, { expiresAt: null }, { expiresAt: { $gte: now } }] },
-    ],
-  })
-    .sort({ minOrder: 1 })
-    .limit(limit)
-    .lean();
+  const docs = await db()
+    .select()
+    .from(coupons)
+    .where(
+      and(
+        eq(coupons.isActive, true),
+        or(isNull(coupons.startsAt), lte(coupons.startsAt, now)),
+        or(isNull(coupons.expiresAt), gte(coupons.expiresAt, now))
+      )
+    )
+    .orderBy(asc(coupons.minOrder))
+    .all();
 
   return docs
     .filter((c) => !c.usageLimit || (c.usedCount ?? 0) < c.usageLimit)
+    .slice(0, limit)
     .map((c) => ({
       code: c.code,
       description: c.description ?? "",
@@ -50,10 +53,9 @@ export async function listPublicOffers(limit = 3): Promise<PublicOffer[]> {
 export async function validateCoupon(
   rawCode: string,
   subtotal: number
-): Promise<{ coupon: CouponDoc; discount: number; label: string }> {
-  await connectDB();
+): Promise<{ coupon: CouponRow; discount: number; label: string }> {
   const code = rawCode.trim().toUpperCase();
-  const coupon = await Coupon.findOne({ code });
+  const coupon = await db().select().from(coupons).where(eq(coupons.code, code)).get();
 
   if (!coupon || !coupon.isActive) {
     throw new HttpError("That coupon code isn't valid.", 404);
@@ -102,8 +104,17 @@ export async function applyCoupon(code: string, subtotal: number): Promise<Appli
 
 /** Increment a coupon's usage counter (called once payment is confirmed). */
 export async function incrementCouponUsage(code: string): Promise<void> {
-  await connectDB();
-  await Coupon.updateOne({ code: code.trim().toUpperCase() }, { $inc: { usedCount: 1 } });
+  const normalized = code.trim().toUpperCase();
+  const row = await db()
+    .select({ used: coupons.usedCount })
+    .from(coupons)
+    .where(eq(coupons.code, normalized))
+    .get();
+  if (!row) return;
+  await db()
+    .update(coupons)
+    .set({ usedCount: (row.used ?? 0) + 1 })
+    .where(eq(coupons.code, normalized));
 }
 
 // ---- admin ------------------------------------------------------------
@@ -123,9 +134,9 @@ export type AdminCouponRow = {
   isActive: boolean;
 };
 
-function toRow(c: CouponDoc): AdminCouponRow {
+function toRow(c: CouponRow): AdminCouponRow {
   return {
-    id: String(c._id),
+    id: c.id,
     code: c.code,
     description: c.description ?? "",
     type: c.type as "percent" | "flat",
@@ -141,9 +152,8 @@ function toRow(c: CouponDoc): AdminCouponRow {
 }
 
 export async function listCoupons(): Promise<AdminCouponRow[]> {
-  await connectDB();
-  const docs = await Coupon.find({}).sort({ createdAt: -1 }).lean();
-  return docs.map((d) => toRow(d as unknown as CouponDoc));
+  const docs = await db().select().from(coupons).orderBy(desc(coupons.createdAt)).all();
+  return docs.map(toRow);
 }
 
 function mapInput(input: AdminCouponInput) {
@@ -155,33 +165,36 @@ function mapInput(input: AdminCouponInput) {
     minOrder: input.minOrder ?? 0,
     maxDiscount: input.maxDiscount ?? 0,
     usageLimit: input.usageLimit ?? 0,
-    startsAt: input.startsAt ? new Date(input.startsAt) : undefined,
-    expiresAt: input.expiresAt ? new Date(input.expiresAt) : undefined,
+    startsAt: input.startsAt ? new Date(input.startsAt) : null,
+    expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
     isActive: input.isActive ?? true,
   };
 }
 
 export async function createCoupon(input: AdminCouponInput): Promise<string> {
-  await connectDB();
   const data = mapInput(input);
-  const existing = await Coupon.findOne({ code: data.code }).select("_id").lean();
+  const existing = await db()
+    .select({ id: coupons.id })
+    .from(coupons)
+    .where(eq(coupons.code, data.code))
+    .get();
   if (existing) throw new HttpError("A coupon with that code already exists.", 409);
-  const doc = await Coupon.create(data);
-  return String(doc._id);
+  const [row] = await db().insert(coupons).values(data).returning({ id: coupons.id });
+  return row.id;
 }
 
 export async function updateCoupon(id: string, input: AdminCouponInput): Promise<void> {
-  await connectDB();
   const data = mapInput(input);
-  const clash = await Coupon.findOne({ code: data.code, _id: { $ne: id } })
-    .select("_id")
-    .lean();
+  const clash = await db()
+    .select({ id: coupons.id })
+    .from(coupons)
+    .where(and(eq(coupons.code, data.code), ne(coupons.id, id)))
+    .get();
   if (clash) throw new HttpError("A coupon with that code already exists.", 409);
-  const res = await Coupon.updateOne({ _id: id }, { $set: data });
-  if (res.matchedCount === 0) throw new HttpError("Coupon not found.", 404);
+  const res = await db().update(coupons).set(data).where(eq(coupons.id, id)).returning({ id: coupons.id });
+  if (res.length === 0) throw new HttpError("Coupon not found.", 404);
 }
 
 export async function setCouponActive(id: string, isActive: boolean): Promise<void> {
-  await connectDB();
-  await Coupon.updateOne({ _id: id }, { $set: { isActive } });
+  await db().update(coupons).set({ isActive }).where(eq(coupons.id, id));
 }
