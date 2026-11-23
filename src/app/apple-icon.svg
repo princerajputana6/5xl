@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180" role="img" aria-label="5XL">
+  <rect width="180" height="180" rx="40" fill="#101114"/>
+  <text x="90" y="96" text-anchor="middle" dominant-baseline="central"
+        font-family="'Arial Narrow', Arial, Helvetica, sans-serif"
+        font-weight="900" font-style="italic" font-size="76" letter-spacing="-4">
+    <tspan fill="#F6F6F4">5</tspan><tspan fill="#E6B33D">XL</tspan>
+  </text>
+</svg>
