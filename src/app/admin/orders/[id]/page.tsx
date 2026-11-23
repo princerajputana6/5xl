@@ -35,7 +35,7 @@ export default async function AdminOrderDetail({
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-extrabold uppercase tracking-tight">
+          <h1 className="text-2xl font-semibold tracking-tight">
             {order.orderNumber}
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -104,7 +104,7 @@ export default async function AdminOrderDetail({
           </div>
 
           <div className="rounded-xl border border-border p-5">
-            <h2 className="mb-3 font-display text-lg font-bold uppercase">Timeline</h2>
+            <h2 className="mb-3 text-base font-semibold">Timeline</h2>
             <ol className="space-y-3">
               {order.timeline.map((t, i) => (
                 <li key={i} className="flex gap-3 text-sm">
@@ -128,7 +128,7 @@ export default async function AdminOrderDetail({
           )}
 
           <div className="rounded-xl border border-border p-5">
-            <h2 className="font-display text-lg font-bold uppercase">Payment</h2>
+            <h2 className="text-base font-semibold">Payment</h2>
             <p className="mt-2 text-sm">
               <span className="text-muted-foreground">Status: </span>
               <span className="font-medium capitalize">{order.payment.status}</span>
@@ -141,7 +141,7 @@ export default async function AdminOrderDetail({
           </div>
 
           <div className="rounded-xl border border-border p-5">
-            <h2 className="font-display text-lg font-bold uppercase">Ship to</h2>
+            <h2 className="text-base font-semibold">Ship to</h2>
             <address className="mt-2 text-sm not-italic leading-relaxed text-muted-foreground">
               <span className="font-medium text-foreground">{order.address.name}</span>
               <br />

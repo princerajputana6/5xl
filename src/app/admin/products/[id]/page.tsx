@@ -28,7 +28,7 @@ export default async function EditProductPage({
       >
         <ArrowLeft className="size-4" /> Back to products
       </Link>
-      <h1 className="font-display text-3xl font-extrabold uppercase tracking-tight">
+      <h1 className="text-2xl font-semibold tracking-tight">
         Edit · {product.name}
       </h1>
       <ProductForm brands={brands} categories={categories} initial={product} />

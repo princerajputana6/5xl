@@ -7,10 +7,22 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2, ExternalLink, Loader2 } from "lucide-react";
 import type { PostAdminRow } from "@/server/services/blog.service";
 import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/pagination";
+import { PageHeader } from "@/components/admin/page-header";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-export function BlogClient({ rows }: { rows: PostAdminRow[] }) {
+export function BlogClient({
+  rows,
+  total,
+  page,
+  pages,
+}: {
+  rows: PostAdminRow[];
+  total: number;
+  page: number;
+  pages: number;
+}) {
   const router = useRouter();
   const [deleting, setDeleting] = React.useState<string | null>(null);
 
@@ -27,26 +39,24 @@ export function BlogClient({ rows }: { rows: PostAdminRow[] }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl font-extrabold uppercase tracking-tight">Blog</h1>
-          <p className="text-sm text-muted-foreground">
-            {rows.length} post{rows.length === 1 ? "" : "s"}
-          </p>
-        </div>
+      <PageHeader
+        title="Blog"
+        subtitle={`${total} post${total === 1 ? "" : "s"}`}
+      >
         <Button asChild>
           <Link href="/admin/blog/new">
             <Plus className="mr-1 size-4" /> New post
           </Link>
         </Button>
-      </div>
+      </PageHeader>
 
       {rows.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border p-12 text-center text-muted-foreground">
           No posts yet. Create your first article.
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border">
+        <>
+        <div className="admin-card overflow-hidden rounded-2xl border border-border bg-card">
           <table className="w-full text-sm">
             <thead className="bg-muted/60 text-left">
               <tr>
@@ -112,6 +122,8 @@ export function BlogClient({ rows }: { rows: PostAdminRow[] }) {
             </tbody>
           </table>
         </div>
+        <Pagination page={page} pages={pages} total={total} />
+        </>
       )}
     </div>
   );

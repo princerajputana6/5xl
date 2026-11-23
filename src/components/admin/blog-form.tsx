@@ -81,7 +81,7 @@ export function BlogForm({ post }: { post?: PostWithId }) {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-3xl font-extrabold uppercase tracking-tight">
+        <h1 className="text-2xl font-semibold tracking-tight">
           {editing ? "Edit post" : "New post"}
         </h1>
         <div className="flex gap-2">

@@ -90,6 +90,127 @@
   --chart-5: oklch(0.7 0.15 190);
 }
 
+/* ================================================================== */
+/* Admin — scoped design system                                        */
+/* ------------------------------------------------------------------ */
+/* A premium material back-office, independent of the storefront theme.*/
+/* Light is the default (html.admin-light); html.admin-dark flips it.   */
+/* Palette: near-black ink + metallic gold accent + white surfaces on a */
+/* soft canvas (dark mode: gold on true black). Declared after .dark so */
+/* these variables win on <html> even while next-themes keeps .dark on. */
+/* Applies to portaled layers (modals, menus, toasts) too, since they    */
+/* inherit custom properties from <html>.                               */
+/* ================================================================== */
+html.admin-light {
+  --radius: 0.7rem;
+
+  --background: oklch(0.976 0.0035 255); /* soft cool canvas */
+  --foreground: oklch(0.185 0.012 264); /* near-black ink */
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.185 0.012 264);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.185 0.012 264);
+
+  --primary: oklch(0.795 0.132 85); /* metallic gold */
+  --primary-foreground: oklch(0.225 0.03 85); /* dark ink on gold */
+
+  --secondary: oklch(0.965 0.004 255);
+  --secondary-foreground: oklch(0.27 0.012 264);
+
+  --muted: oklch(0.965 0.004 255);
+  --muted-foreground: oklch(0.515 0.014 262);
+
+  --accent: oklch(0.955 0.035 88); /* faint gold wash for hovers */
+  --accent-foreground: oklch(0.3 0.05 85);
+
+  --destructive: oklch(0.577 0.21 26);
+  --destructive-foreground: oklch(0.99 0 0);
+  --success: oklch(0.62 0.15 150);
+  --warning: oklch(0.8 0.15 80);
+
+  --border: oklch(0.915 0.004 255);
+  --input: oklch(0.9 0.005 255);
+  --ring: oklch(0.795 0.132 85);
+
+  /* Material elevation: layered, directional — not a single flat blur. */
+  --shadow-card: 0 1px 2px oklch(0.2 0.02 264 / 0.06), 0 1px 3px oklch(0.2 0.02 264 / 0.05);
+  --shadow-raised: 0 2px 4px oklch(0.2 0.02 264 / 0.06), 0 8px 24px oklch(0.2 0.02 264 / 0.09);
+  --shadow-overlay: 0 1px 3px oklch(0.2 0.02 264 / 0.1), 0 16px 48px oklch(0.2 0.02 264 / 0.18);
+  --shadow-gold: 0 4px 14px oklch(0.795 0.132 85 / 0.4);
+}
+
+html.admin-dark {
+  --radius: 0.7rem;
+
+  --background: oklch(0.155 0.006 264); /* deep near-black canvas */
+  --foreground: oklch(0.97 0.003 255);
+
+  --card: oklch(0.196 0.008 264);
+  --card-foreground: oklch(0.97 0.003 255);
+
+  --popover: oklch(0.205 0.008 264);
+  --popover-foreground: oklch(0.97 0.003 255);
+
+  --primary: oklch(0.84 0.14 86); /* brighter gold on black */
+  --primary-foreground: oklch(0.2 0.03 86);
+
+  --secondary: oklch(0.25 0.008 264);
+  --secondary-foreground: oklch(0.97 0.003 255);
+
+  --muted: oklch(0.25 0.008 264);
+  --muted-foreground: oklch(0.705 0.012 262);
+
+  --accent: oklch(0.3 0.05 86);
+  --accent-foreground: oklch(0.92 0.06 88);
+
+  --destructive: oklch(0.62 0.2 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --success: oklch(0.72 0.17 152);
+  --warning: oklch(0.82 0.15 80);
+
+  --border: oklch(0.275 0.008 264);
+  --input: oklch(0.3 0.008 264);
+  --ring: oklch(0.84 0.14 86);
+
+  --shadow-card: 0 1px 2px oklch(0 0 0 / 0.5), 0 2px 8px oklch(0 0 0 / 0.4);
+  --shadow-raised: 0 2px 6px oklch(0 0 0 / 0.5), 0 12px 32px oklch(0 0 0 / 0.55);
+  --shadow-overlay: 0 2px 8px oklch(0 0 0 / 0.5), 0 24px 56px oklch(0 0 0 / 0.65);
+  --shadow-gold: 0 4px 16px oklch(0.84 0.14 86 / 0.28);
+}
+
+/* Material elevation utilities for admin surfaces. */
+.admin-card {
+  box-shadow: var(--shadow-card);
+}
+.admin-raised {
+  box-shadow: var(--shadow-raised);
+}
+.admin-overlay {
+  box-shadow: var(--shadow-overlay);
+}
+.admin-gold-glow {
+  box-shadow: var(--shadow-gold);
+}
+/* A hairline gold top-accent used on primary KPI / header surfaces. */
+.admin-gold-rule {
+  position: relative;
+}
+.admin-gold-rule::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  border-radius: 9999px 9999px 0 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--primary), transparent 10%),
+    transparent
+  );
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

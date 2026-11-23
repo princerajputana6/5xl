@@ -207,7 +207,7 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-extrabold uppercase tracking-tight">Categories</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Categories</h1>
           <p className="text-sm text-muted-foreground">
             {rows.length} categor{rows.length === 1 ? "y" : "ies"} · shown on the storefront homepage
           </p>
