@@ -43,7 +43,12 @@ export type ProductVariant = {
   stock: number;
 };
 export type NutritionRow = { label: string; value: string };
-export type KeyBenefit = { title: string; description: string; images: string[] };
+export type KeyBenefit = {
+  title: string;
+  description: string;
+  icon?: string;
+  images: string[];
+};
 
 export type OrderItem = {
   product: string; // product id snapshot
@@ -244,6 +249,11 @@ export const products = sqliteTable(
     ingredients: text({ mode: "json" }).$type<string[]>().default([]).notNull(),
     benefits: text({ mode: "json" }).$type<string[]>().default([]).notNull(),
     keyBenefits: text("key_benefits", { mode: "json" }).$type<KeyBenefit[]>().default([]).notNull(),
+    /** Curated "frequently bought together" product slugs (admin-managed). */
+    frequentlyBoughtWith: text("frequently_bought_with", { mode: "json" })
+      .$type<string[]>()
+      .default([])
+      .notNull(),
     usage: text(),
     tags: text({ mode: "json" }).$type<string[]>().default([]).notNull(),
     goals: text({ mode: "json" }).$type<string[]>().default([]).notNull(),

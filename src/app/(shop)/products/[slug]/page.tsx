@@ -7,6 +7,7 @@ import {
   getProductBySlug,
   getRelatedProducts,
   getProductOptions,
+  getProductsBySlugs,
 } from "@/server/services/catalog.service";
 import { listPublicOffers } from "@/server/services/coupon.service";
 import { getWishlistProductIds } from "@/server/services/wishlist.service";
@@ -22,7 +23,7 @@ import { ProductStickyBar } from "@/components/shop/product-sticky-bar";
 import { ProductCard } from "@/components/shop/product-card";
 import { Rating } from "@/components/shop/rating";
 import { ReviewsSection } from "@/components/shop/reviews-section";
-import { PriceCard } from "@/components/shop/price-card";
+import { ProductPrice } from "@/components/shop/product-price";
 import { OffersStrip } from "@/components/shop/offers-strip";
 import { OptionSwatches } from "@/components/shop/option-swatches";
 import { PincodeChecker } from "@/components/shop/pincode-checker";
@@ -32,7 +33,16 @@ import { FrequentlyBoughtTogether } from "@/components/shop/frequently-bought-to
 import { AboutProduct } from "@/components/shop/about-product";
 import { ProductFaqs } from "@/components/shop/product-faqs";
 import { getProductFaqs } from "@/lib/product-faq";
-import { getKeyBenefits, getUsage, getServingInfo } from "@/lib/product-content";
+import { getKeyBenefits, getUsage } from "@/lib/product-content";
+
+/** Nutrition rows whose value is effectively zero/empty are hidden on the storefront. */
+function isMeaningfulNutritionValue(value: string): boolean {
+  const compact = value.replace(/\s+/g, "");
+  if (compact === "" || /^[-–—]+$/.test(compact)) return false;
+  const num = parseFloat(compact.replace(/[^0-9.]/g, ""));
+  if (!Number.isNaN(num) && num === 0) return false;
+  return true;
+}
 import { cn } from "@/lib/utils";
 
 export async function generateMetadata({
@@ -76,7 +86,16 @@ export default async function ProductDetailPage({
     userId ? getUserReview(userId, product.id) : Promise.resolve(null),
   ]);
 
-  const servingInfo = getServingInfo(product.name, product.categorySlug);
+  // Curated "frequently bought together" products, else fall back to related.
+  const fbtSuggestions = product.frequentlyBoughtWith.length
+    ? (await getProductsBySlugs(product.frequentlyBoughtWith)).filter(
+        (p) => p.slug !== product.slug
+      )
+    : related;
+
+  const nutritionRows = product.nutritionFacts.filter((n) =>
+    isMeaningfulNutritionValue(n.value)
+  );
 
   return (
     <div className="container-5xl py-8">
@@ -119,15 +138,15 @@ export default async function ProductDetailPage({
             {product.name}
           </h1>
 
-          {servingInfo && (
-            <p className="inline-block rounded-lg bg-primary/15 px-3 py-1.5 text-sm font-medium">
-              {servingInfo}
+          {product.shortDescription && (
+            <p className="text-base font-medium text-muted-foreground md:text-lg">
+              {product.shortDescription}
             </p>
           )}
 
           <Rating value={product.rating} count={product.reviewCount} size="md" />
 
-          <PriceCard price={product.price} mrp={product.mrp} />
+          <ProductPrice />
 
           <p className={cn("text-sm font-medium", product.inStock ? "text-success" : "text-destructive")}>
             {product.inStock ? "✓ In stock — ready to ship" : "Out of stock"}
@@ -163,7 +182,7 @@ export default async function ProductDetailPage({
         <KeyBenefits benefits={getKeyBenefits(product.categorySlug)} />
       )}
 
-      <FrequentlyBoughtTogether product={product} suggestions={related} />
+      <FrequentlyBoughtTogether product={product} suggestions={fbtSuggestions} />
 
       <AboutProduct
         description={product.description}
@@ -171,8 +190,8 @@ export default async function ProductDetailPage({
         usage={getUsage(product.usage, product.categorySlug)}
       />
 
-      {/* Nutrition facts */}
-      {product.nutritionFacts.length > 0 && (
+      {/* Nutrition facts (zero / empty values hidden) */}
+      {nutritionRows.length > 0 && (
         <section className="mt-8 md:mt-10">
           <h2 className="mb-4 font-display text-2xl font-extrabold uppercase tracking-tight">
             Nutrition Facts
@@ -180,7 +199,7 @@ export default async function ProductDetailPage({
           <div className="max-w-md overflow-hidden rounded-lg border border-border">
             <table className="w-full text-sm">
               <tbody>
-                {product.nutritionFacts.map((n, i) => (
+                {nutritionRows.map((n, i) => (
                   <tr key={n.label} className={i % 2 ? "bg-muted/40" : ""}>
                     <td className="px-4 py-2.5 font-medium">{n.label}</td>
                     <td className="px-4 py-2.5 text-right text-muted-foreground">{n.value}</td>

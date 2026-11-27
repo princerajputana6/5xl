@@ -1,0 +1,1 @@
+ALTER TABLE `products` ADD `frequently_bought_with` text DEFAULT '[]' NOT NULL;

@@ -185,6 +185,7 @@ export async function getProductBySlug(slug: string): Promise<ProductDetailDTO |
       ingredients: products.ingredients,
       benefits: products.benefits,
       keyBenefits: products.keyBenefits,
+      frequentlyBoughtWith: products.frequentlyBoughtWith,
       usage: products.usage,
       tags: products.tags,
       goals: products.goals,
@@ -222,8 +223,10 @@ export async function getProductBySlug(slug: string): Promise<ProductDetailDTO |
     keyBenefits: (p.keyBenefits ?? []).map((k) => ({
       title: k.title ?? "",
       description: k.description ?? "",
+      icon: k.icon ?? "",
       images: k.images ?? [],
     })),
+    frequentlyBoughtWith: p.frequentlyBoughtWith ?? [],
     usage: p.usage ?? undefined,
     tags: p.tags ?? [],
     goals: p.goals ?? [],

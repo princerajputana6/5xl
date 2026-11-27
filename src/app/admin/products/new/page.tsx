@@ -2,13 +2,17 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { requirePermission } from "@/lib/session";
 import { getProductFormOptions } from "@/server/services/admin.service";
+import { listProductsForPicker } from "@/server/services/catalog.service";
 import { ProductForm } from "@/components/admin/product-form";
 
 export const metadata = { title: "New product" };
 
 export default async function NewProductPage() {
   await requirePermission("products:write");
-  const { brands, categories } = await getProductFormOptions();
+  const [{ brands, categories }, products] = await Promise.all([
+    getProductFormOptions(),
+    listProductsForPicker(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -19,7 +23,7 @@ export default async function NewProductPage() {
         <ArrowLeft className="size-4" /> Back to products
       </Link>
       <h1 className="text-2xl font-semibold tracking-tight">New product</h1>
-      <ProductForm brands={brands} categories={categories} />
+      <ProductForm brands={brands} categories={categories} products={products} />
     </div>
   );
 }

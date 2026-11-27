@@ -352,8 +352,10 @@ export async function getProductForAdmin(id: string): Promise<AdminProductForm |
     keyBenefits: (p.keyBenefits ?? []).map((k) => ({
       title: k.title ?? "",
       description: k.description ?? "",
+      icon: k.icon ?? "",
       images: k.images ?? [],
     })),
+    frequentlyBoughtWith: p.frequentlyBoughtWith ?? [],
     ingredients: p.ingredients ?? [],
     usage: p.usage ?? "",
     nutritionFacts: (p.nutritionFacts ?? []).map((n) => ({ label: n.label, value: n.value })),
@@ -426,8 +428,10 @@ function mapProductInput(input: AdminProductInput) {
     keyBenefits: (input.keyBenefits ?? []).map((k) => ({
       title: k.title,
       description: k.description ?? "",
+      icon: k.icon ?? "",
       images: k.images ?? [],
     })),
+    frequentlyBoughtWith: input.frequentlyBoughtWith ?? [],
     ingredients: input.ingredients ?? [],
     usage: input.usage ?? "",
     nutritionFacts: (input.nutritionFacts ?? []).map((n) => ({ label: n.label, value: n.value })),

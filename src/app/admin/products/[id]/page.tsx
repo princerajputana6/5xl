@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { requirePermission } from "@/lib/session";
 import { getProductFormOptions, getProductForAdmin } from "@/server/services/admin.service";
+import { listProductsForPicker } from "@/server/services/catalog.service";
 import { ProductForm } from "@/components/admin/product-form";
 
 export const metadata = { title: "Edit product" };
@@ -14,9 +15,10 @@ export default async function EditProductPage({
 }) {
   await requirePermission("products:write");
   const { id } = await params;
-  const [{ brands, categories }, product] = await Promise.all([
+  const [{ brands, categories }, product, products] = await Promise.all([
     getProductFormOptions(),
     getProductForAdmin(id),
+    listProductsForPicker(),
   ]);
   if (!product) notFound();
 
@@ -31,7 +33,7 @@ export default async function EditProductPage({
       <h1 className="text-2xl font-semibold tracking-tight">
         Edit · {product.name}
       </h1>
-      <ProductForm brands={brands} categories={categories} initial={product} />
+      <ProductForm brands={brands} categories={categories} products={products} initial={product} />
     </div>
   );
 }

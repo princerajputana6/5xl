@@ -1,9 +1,38 @@
-import { CheckCircle2 } from "lucide-react";
+import {
+  CheckCircle2,
+  Zap,
+  Dumbbell,
+  ShieldCheck,
+  Timer,
+  Flame,
+  Leaf,
+  Heart,
+  Beaker,
+  Star,
+  Target,
+  type LucideIcon,
+} from "lucide-react";
 
 export type ProductKeyBenefit = {
   title: string;
   description: string;
+  icon?: string;
   images: string[];
+};
+
+/** Icon names an admin can pick for a key-benefit card (lucide). */
+export const BENEFIT_ICONS: Record<string, LucideIcon> = {
+  check: CheckCircle2,
+  zap: Zap,
+  dumbbell: Dumbbell,
+  shield: ShieldCheck,
+  timer: Timer,
+  flame: Flame,
+  leaf: Leaf,
+  heart: Heart,
+  beaker: Beaker,
+  star: Star,
+  target: Target,
 };
 
 /**
@@ -41,11 +70,15 @@ export function ProductKeyBenefits({ items }: { items: ProductKeyBenefit[] }) {
               )}
 
               <div className="flex flex-1 flex-col p-5">
-                {!hasImages && (
-                  <span className="mb-3 grid size-11 place-items-center rounded-full bg-primary/15">
-                    <CheckCircle2 className="size-5 text-primary" />
-                  </span>
-                )}
+                {!hasImages &&
+                  (() => {
+                    const Icon = BENEFIT_ICONS[b.icon ?? ""] ?? CheckCircle2;
+                    return (
+                      <span className="mb-3 grid size-11 place-items-center rounded-full bg-primary/15">
+                        <Icon className="size-5 text-primary" />
+                      </span>
+                    );
+                  })()}
                 {b.title && (
                   <p className="font-display text-base font-bold uppercase tracking-tight">
                     {b.title}

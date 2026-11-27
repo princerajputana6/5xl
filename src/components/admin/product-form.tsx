@@ -36,7 +36,23 @@ import { cn } from "@/lib/utils";
 import type { AdminProductForm } from "@/server/services/admin.service";
 
 type Option = { id: string; name: string };
-type KeyBenefitDraft = { title: string; description: string; images: string[] };
+type PickerProduct = { slug: string; name: string };
+type KeyBenefitDraft = { title: string; description: string; icon: string; images: string[] };
+
+/** Icon choices for a key-benefit card (must match BENEFIT_ICONS on the storefront). */
+const BENEFIT_ICON_OPTIONS = [
+  "check",
+  "zap",
+  "dumbbell",
+  "shield",
+  "timer",
+  "flame",
+  "leaf",
+  "heart",
+  "beaker",
+  "star",
+  "target",
+] as const;
 
 const slugify = (s: string) =>
   s
@@ -103,13 +119,29 @@ function KeyBenefitsEditor({
               <Trash2 className="size-4" />
             </Button>
           </div>
-          <div className="space-y-1.5">
-            <Label>Title</Label>
-            <Input
-              value={b.title}
-              onChange={(e) => update(i, { title: e.target.value })}
-              placeholder="Faster recovery"
-            />
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+            <div className="space-y-1.5">
+              <Label>Title</Label>
+              <Input
+                value={b.title}
+                onChange={(e) => update(i, { title: e.target.value })}
+                placeholder="Faster recovery"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Icon (for text cards)</Label>
+              <select
+                value={b.icon}
+                onChange={(e) => update(i, { icon: e.target.value })}
+                className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm capitalize sm:w-40"
+              >
+                {BENEFIT_ICON_OPTIONS.map((name) => (
+                  <option key={name} value={name === "check" ? "" : name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="space-y-1.5">
             <Label>Text (optional)</Label>
@@ -134,7 +166,9 @@ function KeyBenefitsEditor({
         type="button"
         variant="outline"
         size="sm"
-        onClick={() => onChange([...value, { title: "", description: "", images: [] }])}
+        onClick={() =>
+          onChange([...value, { title: "", description: "", icon: "", images: [] }])
+        }
       >
         <Plus className="mr-1 size-4" /> Add key benefit
       </Button>
@@ -148,13 +182,83 @@ function KeyBenefitsEditor({
   );
 }
 
+/** Searchable product picker for the "Frequently Bought Together" bundle. */
+function FbtPicker({
+  products,
+  selected,
+  onChange,
+}: {
+  products: PickerProduct[];
+  selected: string[];
+  onChange: (slugs: string[]) => void;
+}) {
+  const [q, setQ] = React.useState("");
+  const filtered = React.useMemo(() => {
+    const s = q.trim().toLowerCase();
+    const list = s
+      ? products.filter((p) => p.name.toLowerCase().includes(s) || p.slug.includes(s))
+      : products;
+    return list.slice(0, 40);
+  }, [q, products]);
+
+  const toggle = (slug: string) =>
+    onChange(selected.includes(slug) ? selected.filter((x) => x !== slug) : [...selected, slug]);
+
+  return (
+    <div className="space-y-2">
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selected.map((slug) => {
+            const p = products.find((x) => x.slug === slug);
+            return (
+              <button
+                key={slug}
+                type="button"
+                onClick={() => toggle(slug)}
+                className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium"
+              >
+                {p?.name ?? slug}
+                <Trash2 className="size-3" />
+              </button>
+            );
+          })}
+        </div>
+      )}
+      <Input placeholder="Search products…" value={q} onChange={(e) => setQ(e.target.value)} />
+      <div className="max-h-52 space-y-1 overflow-y-auto rounded-lg border border-border p-2">
+        {filtered.length === 0 && (
+          <p className="p-2 text-sm text-muted-foreground">No products match.</p>
+        )}
+        {filtered.map((p) => (
+          <label
+            key={p.slug}
+            className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-muted"
+          >
+            <Checkbox
+              checked={selected.includes(p.slug)}
+              onCheckedChange={() => toggle(p.slug)}
+            />
+            {p.name}
+          </label>
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Shown in the “Frequently Bought Together” bundle. Leave empty to auto-suggest from the same
+        category.
+      </p>
+    </div>
+  );
+}
+
 export function ProductForm({
   brands,
   categories,
+  products = [],
   initial,
 }: {
   brands: Option[];
   categories: Option[];
+  products?: PickerProduct[];
   initial?: AdminProductForm;
 }) {
   const router = useRouter();
@@ -190,8 +294,12 @@ export function ProductForm({
     (initial?.keyBenefits ?? []).map((k) => ({
       title: k.title ?? "",
       description: k.description ?? "",
+      icon: k.icon ?? "",
       images: k.images ?? [],
     }))
+  );
+  const [frequentlyBoughtWith, setFrequentlyBoughtWith] = React.useState<string[]>(
+    initial?.frequentlyBoughtWith ?? []
   );
   const [ingredients, setIngredients] = React.useState<string[]>(initial?.ingredients ?? []);
   const [nutrition, setNutrition] = React.useState<NutritionRow[]>(
@@ -259,8 +367,10 @@ export function ProductForm({
         .map((k) => ({
           title: k.title.trim(),
           description: k.description.trim() || undefined,
+          icon: k.icon || undefined,
           images: k.images,
         })),
+      frequentlyBoughtWith,
       ingredients: ingredients.filter(Boolean),
       nutritionFacts: nutrition.filter((n) => n.label && n.value),
       variants: variants.filter((v) => v.label && v.sku),
@@ -492,6 +602,18 @@ export function ProductForm({
             description="The card grid on the product page. Each benefit can have text and/or images."
           >
             <KeyBenefitsEditor value={keyBenefits} onChange={setKeyBenefits} />
+          </Section>
+
+          <Section
+            icon={Package}
+            title="Frequently Bought Together"
+            description="Hand-pick the products shown in the bundle on this product's page."
+          >
+            <FbtPicker
+              products={products}
+              selected={frequentlyBoughtWith}
+              onChange={setFrequentlyBoughtWith}
+            />
           </Section>
 
           <Section
